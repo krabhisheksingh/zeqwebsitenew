@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: rgb(250 250 250);
+  --color-foreground: rgb(10 10 10);
+  --color-card: rgb(240 240 240);
+  --color-accent: rgb(40 80 255);
+  --color-border: rgb(220 220 220);
+
+  --font-sans: "Inter", "Satoshi", "system-ui", "sans-serif";
+
+  --animate-glow: glow 3s ease-in-out infinite alternate;
+  
+  @keyframes glow {
+    0% { opacity: 0.5; filter: blur(20px); }
+    100% { opacity: 1; filter: blur(30px); }
+  }
+}
+
+.dark {
+  --color-background: rgb(5 5 10);
+  --color-foreground: rgb(250 250 250);
+  --color-card: rgb(15 15 20);
+  --color-accent: rgb(60 100 255);
+  --color-border: rgb(30 30 40);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+@utility text-glow {
+  text-shadow: 0 0 20px rgba(40, 80, 255, 0.5);
+}
+
+@utility glass-panel {
+  background-color: rgba(var(--color-card) / 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--color-border) / 0.5);
+}
+
+html {
+  scroll-behavior: smooth;
+}
