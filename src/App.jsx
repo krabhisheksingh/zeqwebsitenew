@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import CustomCursor from './components/CustomCursor';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from './components/LoadingScreen';
+import ScrollToTop from './components/ScrollToTop';
 
 import Home from './pages/Home';
 import Services from './pages/Services';
@@ -29,6 +30,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent selection:text-white transition-colors duration-500">
+      <ScrollToTop />
       <CustomCursor />
       
       <AnimatePresence mode="wait">
