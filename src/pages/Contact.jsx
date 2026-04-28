@@ -125,7 +125,7 @@ export default function Contact() {
                       value={formState.email}
                       onChange={e => setFormState({...formState, email: e.target.value})}
                       className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 outline-none focus:border-accent focus:bg-background/80 transition-all font-light"
-                      placeholder="abhiraj0401@gmail.com"
+                      placeholder="abhiraj@gmail.com"
                     />
                   </div>
                 </div>
