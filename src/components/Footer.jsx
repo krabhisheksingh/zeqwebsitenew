@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe } from 'lucide-react';
+import { Linkedin, Instagram, Twitter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -27,13 +27,13 @@ export default function Footer() {
         <div className="flex flex-col items-center md:items-end gap-4">
           <div className="flex items-center gap-4">
             <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
-              <Globe size={20} />
+              <Linkedin size={20} />
             </a>
             <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
-              <Globe size={20} />
+              <Instagram size={20} />
             </a>
             <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
-              <Globe size={20} />
+              <Twitter size={20} />
             </a>
           </div>
           <p className="text-foreground/40 text-xs">
