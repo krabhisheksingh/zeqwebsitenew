@@ -12,14 +12,18 @@ import Contact from './pages/Contact';
 import Careers from './pages/Careers';
 
 function App() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(window.innerWidth > 768);
   const location = useLocation();
 
   useEffect(() => {
-    // Simulate loading for premium reveal only on initial load
+    // Simulate loading for premium reveal only on initial load (desktop only)
+    if (window.innerWidth <= 768) {
+      setLoading(false);
+      return;
+    }
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 2000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
 
