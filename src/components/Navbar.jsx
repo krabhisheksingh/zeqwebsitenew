@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Moon, Sun } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Moon, Sun, Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,16 +70,45 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4 relative z-10">
+        <div className="flex items-center gap-2 md:gap-4 relative z-10">
           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-foreground/5 transition-colors" aria-label="Toggle Theme">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           
-          <button className="bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:scale-105 active:scale-95 transition-transform">
+          <button className="hidden md:block bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:scale-105 active:scale-95 transition-transform">
             Get Started
+          </button>
+
+          <button 
+            className="md:hidden p-2 rounded-full hover:bg-foreground/5 transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle Mobile Menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden bg-background/95 backdrop-blur-xl border-b border-border/50 overflow-hidden"
+          >
+            <nav className="flex flex-col items-center gap-6 py-8">
+              <Link to="/" className={`text-lg font-medium transition-colors ${location.pathname === '/' ? 'text-accent' : 'text-foreground'}`}>Home</Link>
+              <Link to="/services" className={`text-lg font-medium transition-colors ${location.pathname === '/services' ? 'text-accent' : 'text-foreground'}`}>Services</Link>
+              <Link to="/careers" className={`text-lg font-medium transition-colors ${location.pathname === '/careers' ? 'text-accent' : 'text-foreground'}`}>Careers</Link>
+              <Link to="/contact" className={`text-lg font-medium transition-colors ${location.pathname === '/contact' ? 'text-accent' : 'text-foreground'}`}>Contact</Link>
+              <button className="bg-foreground text-background px-8 py-3 mt-4 rounded-full text-sm font-medium hover:scale-105 active:scale-95 transition-transform">
+                Get Started
+              </button>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }

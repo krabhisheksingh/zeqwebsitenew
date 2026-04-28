@@ -40,7 +40,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-            className="text-6xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tighter leading-[0.95] mb-8"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tighter leading-[0.95] mb-8"
           >
             <span className="block text-foreground">INTELLIGENCE</span>
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40">DRIVEN</span>
