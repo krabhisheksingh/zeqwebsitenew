@@ -113,7 +113,7 @@ export default function Contact() {
                       value={formState.name}
                       onChange={e => setFormState({...formState, name: e.target.value})}
                       className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 outline-none focus:border-accent focus:bg-background/80 transition-all font-light"
-                      placeholder="John Doe"
+                      placeholder="Abhiraj Singh"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -125,7 +125,7 @@ export default function Contact() {
                       value={formState.email}
                       onChange={e => setFormState({...formState, email: e.target.value})}
                       className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 outline-none focus:border-accent focus:bg-background/80 transition-all font-light"
-                      placeholder="john@company.com"
+                      placeholder="abhiraj0401@gmail.com"
                     />
                   </div>
                 </div>
