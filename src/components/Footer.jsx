@@ -1,5 +1,6 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
@@ -7,9 +8,9 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-8">
         
         <div className="flex flex-col items-center md:items-start gap-4">
-          <a href="#" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <img src="/logo/image-removebg-preview.png" alt="Zexora Quvixo" className="h-14 w-auto object-contain" />
-          </a>
+          </Link>
           <p className="text-foreground/50 text-sm max-w-xs text-center md:text-left">
             Intelligence solutions tailored for international scale. Clarity in a complex world.
           </p>
@@ -17,9 +18,9 @@ export default function Footer() {
 
         <nav className="flex items-center gap-6 text-sm">
           {['Home', 'Services', 'Careers', 'Contact'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`} className="text-foreground/60 hover:text-accent transition-colors">
+            <Link key={item} to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} className="text-foreground/60 hover:text-accent transition-colors">
               {item}
-            </a>
+            </Link>
           ))}
         </nav>
 
