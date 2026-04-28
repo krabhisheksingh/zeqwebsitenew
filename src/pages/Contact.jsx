@@ -75,11 +75,16 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold mb-1">Address</h3>
-                  <p className="text-foreground/70 font-light leading-relaxed max-w-sm">
+                  <a 
+                    href="https://maps.app.goo.gl/E9j9gm4q3thYPq9FA"
+                    target="_blank"
+                    rel="noopener noreferrer" 
+                    className="text-foreground/70 hover:text-accent transition-colors font-light leading-relaxed max-w-sm block"
+                  >
                     4th floor, 241, Lotus square, corner, <br />
                     9th Cross Rd, next to HSR High street Restaurant, <br />
                     7th Sector, HSR Layout, Bengaluru, Karnataka 560102
-                  </p>
+                  </a>
                 </div>
               </div>
             </div>
