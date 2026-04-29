@@ -26,13 +26,13 @@ export default function Footer() {
 
         <div className="flex flex-col items-center md:items-end gap-4">
           <div className="flex items-center gap-4">
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-foreground/40 hover:text-accent transition-colors">
+            <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
               <Linkedin size={20} />
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-foreground/40 hover:text-accent transition-colors">
+            <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
               <Instagram size={20} />
             </a>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-foreground/40 hover:text-accent transition-colors">
+            <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
               <Twitter size={20} />
             </a>
           </div>
