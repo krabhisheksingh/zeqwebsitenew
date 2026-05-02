@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linkedin, Instagram, Twitter } from 'lucide-react';
+import { FaLinkedin, FaInstagram, FaTwitter } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -26,14 +26,14 @@ export default function Footer() {
 
         <div className="flex flex-col items-center md:items-end gap-4">
           <div className="flex items-center gap-4">
-            <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
-              <Linkedin size={20} />
+            <a href="https://www.linkedin.com/company/zexora-global-services/posts/?feedView=all" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-background hover:shadow-[0_0_15px_rgba(var(--accent),0.6)] transition-all duration-300">
+              <FaLinkedin size={18} />
             </a>
-            <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
-              <Instagram size={20} />
+            <a href="https://www.instagram.com/zexoraquvixo/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-background hover:shadow-[0_0_15px_rgba(var(--accent),0.6)] transition-all duration-300">
+              <FaInstagram size={18} />
             </a>
-            <a href="#" className="text-foreground/40 hover:text-accent transition-colors">
-              <Twitter size={20} />
+            <a href="#" className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-background hover:shadow-[0_0_15px_rgba(var(--accent),0.6)] transition-all duration-300">
+              <FaTwitter size={18} />
             </a>
           </div>
           <p className="text-foreground/40 text-xs">
