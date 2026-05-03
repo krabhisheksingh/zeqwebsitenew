@@ -1,5 +1,6 @@
 import React from 'react';
-import { FaLinkedin, FaInstagram, FaTwitter } from 'react-icons/fa';
+import { FaLinkedin, FaInstagram } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -18,7 +19,12 @@ export default function Footer() {
 
         <nav className="flex items-center gap-6 text-sm">
           {['Home', 'Services', 'Careers', 'Contact'].map((item) => (
-            <Link key={item} to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} className="text-foreground/60 hover:text-accent transition-colors">
+            <Link 
+              key={item} 
+              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} 
+              onClick={() => window.scrollTo(0, 0)}
+              className="text-foreground/60 hover:text-accent transition-colors"
+            >
               {item}
             </Link>
           ))}
@@ -33,7 +39,7 @@ export default function Footer() {
               <FaInstagram size={18} />
             </a>
             <a href="#" className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-background hover:shadow-[0_0_15px_rgba(var(--accent),0.6)] transition-all duration-300">
-              <FaTwitter size={18} />
+              <FaXTwitter size={18} />
             </a>
           </div>
           <p className="text-foreground/40 text-xs">
