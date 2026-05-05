@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle, Clock, Calendar, Mail, User, Building } from 'lucide-react';
 
 export default function Pipeline() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,6 +18,29 @@ export default function Pipeline() {
   const handleNext = () => setStep(s => Math.min(s + 1, 3));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    
+    const data = new FormData();
+    data.append("form-name", "consultation");
+    Object.keys(formData).forEach((key) => data.append(key, formData[key]));
+
+    try {
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(data).toString(),
+      });
+      alert('Consultation booked successfully!');
+      navigate('/');
+    } catch (error) {
+      console.error(error);
+      alert('There was an error booking your consultation. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-32 pb-24 px-6 md:px-12 relative overflow-hidden flex items-center justify-center">
@@ -124,8 +150,12 @@ export default function Pipeline() {
                 Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             ) : (
-              <button className="px-8 py-3 rounded-full bg-accent text-white font-medium flex items-center gap-2 hover:scale-105 transition-transform hover:shadow-[0_0_20px_rgba(var(--accent),0.4)]">
-                Confirm Booking
+              <button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+                className="px-8 py-3 rounded-full bg-accent text-white font-medium flex items-center gap-2 hover:scale-105 transition-transform hover:shadow-[0_0_20px_rgba(var(--accent),0.4)] disabled:opacity-70 disabled:hover:scale-100"
+              >
+                {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
               </button>
             )}
           </div>
