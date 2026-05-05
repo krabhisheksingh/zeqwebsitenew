@@ -6,7 +6,7 @@ const pillars = [
   {
     icon: Database,
     title: "Data Excellence",
-    desc: "We help organizations capture, clean, and utilize their most valuable asset: information. Our pipelines ensure data integrity from ingestion to analysis."
+    desc: "We help organizations capture, clean, and utilize their most valuable asset information. Our pipelines ensure data integrity from ingestion to analysis."
   },
   {
     icon: Lightbulb,

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const openings = [
   {
@@ -8,14 +9,14 @@ const openings = [
     title: "Business Development Intern",
     department: "Sales & Strategy",
     type: "Internship",
-    location: "Remote",
+    location: "Hybrid",
   },
   {
     id: 2,
     title: "Full Stack Developer Intern",
     department: "Engineering",
     type: "Internship",
-    location: "Remote",
+    location: "Hybrid",
   }
 ];
 
@@ -78,10 +79,10 @@ export default function Careers() {
                 </div>
               </div>
 
-              <button className="flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-medium hover:bg-accent hover:text-background transition-all duration-300 shrink-0 self-start md:self-auto group/btn">
+              <Link to={`/apply/${job.id}`} state={{ job }} className="flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-medium hover:bg-accent hover:text-background transition-all duration-300 shrink-0 self-start md:self-auto group/btn">
                 Apply Now
                 <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-              </button>
+              </Link>
             </motion.div>
           ))}
         </div>

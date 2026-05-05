@@ -64,7 +64,7 @@ export default function Navbar() {
             {location.pathname !== '/careers' && <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-accent group-hover:w-full transition-all duration-300 ease-out"></span>}
           </Link>
           <Link to="/contact" className={`transition-colors relative group ${location.pathname === '/contact' ? 'text-foreground' : 'text-foreground/70 hover:text-foreground'}`}>
-            Contact
+            Who We Are
             {location.pathname === '/contact' && <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-accent"></span>}
             {location.pathname !== '/contact' && <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-accent group-hover:w-full transition-all duration-300 ease-out"></span>}
           </Link>
@@ -101,7 +101,7 @@ export default function Navbar() {
               <Link to="/" className={`text-lg font-medium transition-colors ${location.pathname === '/' ? 'text-accent' : 'text-foreground'}`}>Home</Link>
               <Link to="/services" className={`text-lg font-medium transition-colors ${location.pathname === '/services' ? 'text-accent' : 'text-foreground'}`}>Services</Link>
               <Link to="/careers" className={`text-lg font-medium transition-colors ${location.pathname === '/careers' ? 'text-accent' : 'text-foreground'}`}>Careers</Link>
-              <Link to="/contact" className={`text-lg font-medium transition-colors ${location.pathname === '/contact' ? 'text-accent' : 'text-foreground'}`}>Contact</Link>
+              <Link to="/contact" className={`text-lg font-medium transition-colors ${location.pathname === '/contact' ? 'text-accent' : 'text-foreground'}`}>Who We Are</Link>
               <button className="bg-foreground text-background px-8 py-3 mt-4 rounded-full text-sm font-medium hover:scale-105 active:scale-95 transition-transform">
                 Get Started
               </button>

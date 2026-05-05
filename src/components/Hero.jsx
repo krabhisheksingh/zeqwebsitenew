@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Activity, Database, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Hero() {
   const { scrollY } = useScroll();
@@ -62,13 +63,13 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
             className="flex flex-col sm:flex-row items-center gap-6 w-full sm:w-auto"
           >
-            <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-foreground text-background font-medium text-lg flex items-center justify-center gap-3 hover:scale-105 transition-transform duration-300 group">
+            <Link to="/pipeline" className="w-full sm:w-auto px-8 py-4 rounded-full bg-foreground text-background font-medium text-lg flex items-center justify-center gap-3 hover:scale-105 transition-transform duration-300 group">
               Get Started
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button className="w-full sm:w-auto px-8 py-4 rounded-full border border-border/50 hover:bg-foreground/5 font-medium text-lg transition-colors">
+            </Link>
+            <Link to="/pipeline" className="w-full sm:w-auto px-8 py-4 rounded-full border border-border/50 hover:bg-foreground/5 font-medium text-lg transition-colors flex items-center justify-center">
               Book Consultation
-            </button>
+            </Link>
           </motion.div>
         </motion.div>
 

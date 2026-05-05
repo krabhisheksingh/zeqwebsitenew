@@ -9,6 +9,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Hidden forms for Netlify Forms parsing -->
+    <form name="contact" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="text" name="subject" />
+      <textarea name="message"></textarea>
+    </form>
+    <form name="job-application" netlify netlify-honeypot="bot-field" hidden enctype="multipart/form-data">
+      <input type="text" name="firstName" />
+      <input type="text" name="lastName" />
+      <input type="email" name="email" />
+      <input type="url" name="linkedin" />
+      <input type="file" name="resume" />
+      <input type="text" name="jobTitle" />
+    </form>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

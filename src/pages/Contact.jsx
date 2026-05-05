@@ -11,16 +11,30 @@ export default function Contact() {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate frontend submission
-    setTimeout(() => {
+    
+    const formData = new FormData();
+    formData.append("form-name", "contact");
+    Object.keys(formState).forEach((key) => formData.append(key, formState[key]));
+
+    try {
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(formData).toString(),
+      });
+      
       setIsSubmitting(false);
       setIsSubmitted(true);
       setFormState({ name: '', email: '', subject: '', message: '' });
       setTimeout(() => setIsSubmitted(false), 5000);
-    }, 1500);
+    } catch (error) {
+      console.error(error);
+      setIsSubmitting(false);
+      alert("There was an error sending your message. Please try again.");
+    }
   };
 
   return (
