@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, ClockIcon, History, FileText, Bell, User, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import HRNavbar from '../components/HRNavbar';
 import {
-  getSession, getTodayRecord, checkIn, checkOut,
+  getSession, getTodayRecord, checkIn, checkOut, startBreak, endBreak,
   getEmployeeAttendance, getEmployeeLeaves, applyLeave,
   getAnnouncements, updateEmployee, getEmployees,
 } from '../utils/hrStorage';
@@ -107,6 +107,20 @@ export default function EmployeeDashboard() {
     showToast(`Checked out at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
   };
 
+  const handleStartBreak = async () => {
+    if (!todayRec || todayRec.checkOut || todayRec.onBreak) return;
+    await startBreak(session.employeeId);
+    await refresh();
+    showToast(`Break started at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, 'info');
+  };
+
+  const handleEndBreak = async () => {
+    if (!todayRec || !todayRec.onBreak) return;
+    await endBreak(session.employeeId);
+    await refresh();
+    showToast(`Break ended at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+  };
+
   const handleLeaveSubmit = async (e) => {
     e.preventDefault();
     if (!leaveForm.fromDate || !leaveForm.toDate || !leaveForm.reason) {
@@ -176,26 +190,61 @@ export default function EmployeeDashboard() {
           <>
             {tab === 'attendance' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="rounded-3xl border border-border/30 bg-card/50 backdrop-blur-sm p-8 flex flex-col md:flex-row items-center gap-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="text-4xl font-bold text-foreground">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    <div className="text-foreground/40 text-sm">{new Date().toLocaleDateString('en-IN')}</div>
-                  </div>
-                  <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full">
-                    <button onClick={handleCheckIn} disabled={!!todayRec}
-                      className="flex-1 py-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 font-semibold text-lg hover:bg-green-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                      <CheckCircle2 className="w-5 h-5" />
-                      {todayRec ? `Checked In at ${fmt(todayRec.checkIn)}` : 'Check In'}
+                {/* On Break Banner */}
+                {todayRec?.onBreak && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                      <span className="text-yellow-400 font-semibold">You are currently on a break</span>
+                    </div>
+                    <button onClick={handleEndBreak}
+                      className="px-5 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-sm font-semibold hover:bg-yellow-500/30 transition-all">
+                      End Break
                     </button>
-                    <button onClick={handleCheckOut} disabled={!todayRec || !!todayRec?.checkOut}
-                      className="flex-1 py-4 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-lg hover:bg-red-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                      <XCircle className="w-5 h-5" />
-                      {todayRec?.checkOut ? `Checked Out at ${fmt(todayRec.checkOut)}` : 'Check Out'}
-                    </button>
+                  </motion.div>
+                )}
+
+                <div className="rounded-3xl border border-border/30 bg-card/50 backdrop-blur-sm p-8 flex flex-col gap-6">
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      <div className="text-4xl font-bold text-foreground">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div className="text-foreground/40 text-sm">{new Date().toLocaleDateString('en-IN')}</div>
+                    </div>
+                    <div className="flex-1 flex flex-col gap-3 w-full">
+                      {/* Check In / Check Out */}
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button onClick={handleCheckIn} disabled={!!todayRec}
+                          className="flex-1 py-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 font-semibold text-base hover:bg-green-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                          <CheckCircle2 className="w-5 h-5" />
+                          {todayRec ? `Checked In · ${fmt(todayRec.checkIn)}` : 'Check In'}
+                        </button>
+                        <button onClick={handleCheckOut} disabled={!todayRec || !!todayRec?.checkOut || !!todayRec?.onBreak}
+                          className="flex-1 py-4 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-base hover:bg-red-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                          <XCircle className="w-5 h-5" />
+                          {todayRec?.checkOut ? `Checked Out · ${fmt(todayRec.checkOut)}` : 'Check Out'}
+                        </button>
+                      </div>
+                      {/* Break button (shown only when checked in and not yet checked out) */}
+                      {todayRec && !todayRec.checkOut && (
+                        <button
+                          onClick={todayRec.onBreak ? handleEndBreak : handleStartBreak}
+                          className={`w-full py-3 rounded-2xl border font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                            todayRec.onBreak
+                              ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/30'
+                              : 'bg-background/40 border-border/40 text-foreground/60 hover:bg-background/60 hover:text-foreground'
+                          }`}>
+                          <AlertCircle className="w-4 h-4" />
+                          {todayRec.onBreak ? 'End Break & Resume Work' : 'Go on Break'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Today Summary */}
                 {todayRec && (
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="rounded-2xl border border-border/30 bg-card/40 p-4 text-center">
                       <p className="text-xs text-foreground/40 uppercase tracking-wider mb-1">Check-In</p>
                       <p className="text-xl font-bold text-green-400">{fmt(todayRec.checkIn)}</p>
@@ -205,8 +254,34 @@ export default function EmployeeDashboard() {
                       <p className="text-xl font-bold text-red-400">{todayRec.checkOut ? fmt(todayRec.checkOut) : '—'}</p>
                     </div>
                     <div className="rounded-2xl border border-border/30 bg-card/40 p-4 text-center">
-                      <p className="text-xs text-foreground/40 uppercase tracking-wider mb-1">Hours</p>
+                      <p className="text-xs text-foreground/40 uppercase tracking-wider mb-1">Break Time</p>
+                      <p className="text-xl font-bold text-yellow-400">
+                        {todayRec.totalBreakMinutes ? `${Math.floor(todayRec.totalBreakMinutes)}m` : '—'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-border/30 bg-card/40 p-4 text-center">
+                      <p className="text-xs text-foreground/40 uppercase tracking-wider mb-1">Hours Worked</p>
                       <p className="text-xl font-bold text-accent">{todayRec.totalHours ? `${todayRec.totalHours}h` : '—'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Break log */}
+                {todayRec?.breaks?.length > 0 && (
+                  <div className="rounded-2xl border border-border/30 bg-card/40 p-5">
+                    <p className="text-xs uppercase tracking-widest text-foreground/40 font-semibold mb-3">Break Log</p>
+                    <div className="flex flex-col gap-2">
+                      {todayRec.breaks.map((b, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-foreground/60">Break {i + 1}</span>
+                          <span className="text-foreground/80">
+                            {fmt(b.start)} → {b.end ? fmt(b.end) : <span className="text-yellow-400 animate-pulse">Ongoing</span>}
+                            {b.end && <span className="ml-2 text-foreground/40">
+                              ({Math.floor((new Date(b.end) - new Date(b.start)) / 60000)}m)
+                            </span>}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

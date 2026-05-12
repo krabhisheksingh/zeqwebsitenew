@@ -72,7 +72,9 @@ export const checkIn = async (employeeId, employeeName) => {
   const docId = `${employeeId}_${today}`;
   await setDoc(doc(db, 'attendance', docId), {
     id: docId, employeeId, employeeName, date: today,
-    checkIn: new Date().toISOString(), checkOut: null, totalHours: null, status: 'present',
+    checkIn: new Date().toISOString(), checkOut: null,
+    breaks: [], onBreak: false, totalBreakMinutes: 0,
+    totalHours: null, status: 'present',
   });
 };
 
@@ -82,13 +84,54 @@ export const checkOut = async (employeeId) => {
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const record = snap.data();
+  if (record.onBreak) {
+    // End any open break before checking out
+    await endBreak(employeeId);
+  }
+  const freshSnap = await getDoc(ref);
+  const fresh = freshSnap.data();
   const now = new Date();
-  const hours = parseFloat(((now - new Date(record.checkIn)) / 3600000).toFixed(2));
+  const totalMinutes = (now - new Date(fresh.checkIn)) / 60000;
+  const breakMinutes = fresh.totalBreakMinutes || 0;
+  const workedMinutes = Math.max(0, totalMinutes - breakMinutes);
+  const hours = parseFloat((workedMinutes / 60).toFixed(2));
   await updateDoc(ref, {
     checkOut: now.toISOString(),
     totalHours: hours,
+    onBreak: false,
     status: hours >= 8 ? 'present' : hours >= 4 ? 'half-day' : 'present',
   });
+};
+
+export const startBreak = async (employeeId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const ref = doc(db, 'attendance', `${employeeId}_${today}`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const record = snap.data();
+  if (record.checkOut || record.onBreak) return;
+  const breaks = record.breaks || [];
+  breaks.push({ start: new Date().toISOString(), end: null });
+  await updateDoc(ref, { breaks, onBreak: true });
+};
+
+export const endBreak = async (employeeId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const ref = doc(db, 'attendance', `${employeeId}_${today}`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const record = snap.data();
+  const now = new Date();
+  const breaks = (record.breaks || []).map((b) =>
+    b.end === null ? { ...b, end: now.toISOString() } : b
+  );
+  const totalBreakMinutes = parseFloat(
+    breaks.reduce((acc, b) => {
+      if (b.end) return acc + (new Date(b.end) - new Date(b.start)) / 60000;
+      return acc;
+    }, 0).toFixed(2)
+  );
+  await updateDoc(ref, { breaks, onBreak: false, totalBreakMinutes });
 };
 
 export const getEmployeeAttendance = async (employeeId, days = 30) => {
