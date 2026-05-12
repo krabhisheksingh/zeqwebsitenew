@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Counter = ({ value, suffix = "", prefix = "", decimal = false }) => {
   const [count, setCount] = useState(0);
@@ -82,9 +83,9 @@ export default function Metrics() {
 
           <div className="mt-20 text-center">
             <h3 className="text-2xl font-medium mb-8">Ready to transform your ecosystem?</h3>
-            <button className="px-10 py-4 rounded-full bg-accent text-white font-semibold text-lg hover:bg-accent/90 transition-colors shadow-[0_0_30px_rgba(40,80,255,0.3)] hover:shadow-[0_0_40px_rgba(40,80,255,0.5)]">
+            <Link to="/pipeline" className="inline-block px-10 py-4 rounded-full bg-accent text-white font-semibold text-lg hover:bg-accent/90 transition-colors shadow-[0_0_30px_rgba(40,80,255,0.3)] hover:shadow-[0_0_40px_rgba(40,80,255,0.5)]">
               Start Your Project
-            </button>
+            </Link>
           </div>
         </motion.div>
       </div>

@@ -1,6 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, MapPin, Send, ArrowRight } from 'lucide-react';
+import { FaLinkedin, FaTwitter } from 'react-icons/fa';
+
+const teamMembers = [
+  {
+    name: "Neha Patel",
+    role: "Director",
+    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&q=80",
+    bio: "Driving strategic initiatives and operational excellence across the organization.",
+    social: { linkedin: "#", twitter: "#" }
+  },
+  {
+    name: "Vivek Patel",
+    role: "Founder & Chief Executive Officer",
+    image: "/vivek.jpg",
+    bio: "Visionary leader with a decade of experience in enterprise intelligence.",
+    social: { linkedin: "#", twitter: "#" }
+  },
+  {
+    name: "Abhishek Singh",
+    role: "Technical Head",
+    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&q=80",
+    bio: "Architecting robust, scalable, and cutting-edge software solutions.",
+    social: { linkedin: "#", twitter: "#" }
+  },
+  {
+    name: "Shruti Patel",
+    role: "Chief Legal Officer (CLO)",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=500&q=80",
+    bio: "Navigating complex legal landscapes and ensuring corporate compliance.",
+    social: { linkedin: "#", twitter: "#" }
+  }
+];
+
 
 export default function Contact() {
   const [formState, setFormState] = useState({ name: '', email: '', subject: '', message: '' });
@@ -38,11 +71,100 @@ export default function Contact() {
   };
 
   return (
-    <main className="pt-32 pb-24 min-h-screen flex items-center relative overflow-hidden">
+    <main className="pt-32 pb-24 min-h-screen flex flex-col relative overflow-hidden">
       {/* Background Decor */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[10%] left-[-10%] w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px] mix-blend-screen pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px] mix-blend-screen pointer-events-none"></div>
+      </div>
+
+      {/* About Section */}
+      <section className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full mb-32 mt-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="flex items-center gap-4 mb-6"
+        >
+          <div className="w-12 h-[1px] bg-accent"></div>
+          <span className="text-accent text-sm font-semibold tracking-[0.2em] uppercase">Who We Are</span>
+        </motion.div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="lg:col-span-5"
+          >
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter leading-[1.1] mb-8 sticky top-32">
+              We build digital <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-purple-500">ecosystems</span> designed for the future.
+            </h2>
+          </motion.div>
+          
+          <motion.div 
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="lg:col-span-7 flex flex-col gap-6 text-foreground/70 font-light text-lg md:text-xl leading-relaxed"
+          >
+            <p className="text-foreground font-medium text-xl md:text-2xl border-l-2 border-accent pl-6 mb-4">
+              At Zexora Quvixo, we are a future-focused digital solutions company dedicated to helping businesses build, scale, and grow in the modern digital world.
+            </p>
+            <p>
+              We combine strategy, creativity, technology, and innovation to create powerful digital experiences that drive real business results. Our team specializes in branding, web design & development, AI-powered product solutions, digital marketing, automation, and business growth strategies.
+            </p>
+            <p>
+              We work closely with startups, creators, enterprises, and growing brands to transform ideas into impactful digital products and scalable business systems. We believe that every business deserves more than just services — it deserves a growth partner. 
+            </p>
+            <p>
+              That’s why we focus on creating tailored solutions that align with each client’s vision, audience, and long-term goals. From building strong brand identities to developing modern websites, intelligent automation systems, and high-converting digital campaigns, we help brands stand out in competitive markets.
+            </p>
+            <p>
+              Driven by creativity, technology, and performance, our mission is to simplify digital transformation and empower businesses with innovative solutions that create measurable growth, stronger customer engagement, and lasting brand value.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full mb-32 mt-8">
+        <div className="flex items-center gap-4 mb-6 justify-center">
+          <div className="w-12 h-[1px] bg-accent"></div>
+          <span className="text-accent text-sm font-semibold tracking-[0.2em] uppercase">Leadership</span>
+          <div className="w-12 h-[1px] bg-accent"></div>
+        </div>
+        
+        <h2 className="text-4xl md:text-5xl font-bold tracking-tighter mb-16 text-center">
+          Meet Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-purple-500">Team</span>
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {teamMembers.map((member, idx) => (
+            <motion.div 
+              key={idx}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: idx * 0.2 }}
+              className="glass-panel border border-border/30 rounded-3xl p-6 flex flex-col items-center text-center group hover:border-accent/40 transition-colors duration-500"
+            >
+              <div className="w-32 h-32 rounded-full overflow-hidden mb-6 border-2 border-accent/20 group-hover:border-accent transition-colors duration-500 relative">
+                <img src={member.image} alt={member.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 mix-blend-overlay"></div>
+              </div>
+              <h3 className="text-2xl font-bold mb-1">{member.name}</h3>
+              <p className="text-accent font-medium text-sm mb-4 tracking-wide uppercase">{member.role}</p>
+              <p className="text-foreground/70 font-light text-sm mb-6 leading-relaxed">
+                {member.bio}
+              </p>
+
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
@@ -116,7 +238,11 @@ export default function Contact() {
               
               <h3 className="text-2xl font-bold mb-8 relative z-10">Send us a Query</h3>
               
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6 relative z-10">
+              <form name="contact" data-netlify="true" netlify-honeypot="bot-field" onSubmit={handleSubmit} className="flex flex-col gap-6 relative z-10">
+                <input type="hidden" name="form-name" value="contact" />
+                <p className="hidden">
+                  <label>Don’t fill this out if you're human: <input name="bot-field" /></label>
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
                     <label htmlFor="name" className="text-xs uppercase tracking-widest text-foreground/50 font-semibold">Name</label>

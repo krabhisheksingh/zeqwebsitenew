@@ -69,7 +69,11 @@ export default function JobApplication() {
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Apply for <span className="text-accent">{job.title}</span></h1>
           <p className="text-foreground/60 mb-10">Join our ecosystem and build the future with us.</p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <form name="job-application" data-netlify="true" netlify-honeypot="bot-field" onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <input type="hidden" name="form-name" value="job-application" />
+            <p className="hidden">
+              <label>Don’t fill this out if you're human: <input name="bot-field" /></label>
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold uppercase tracking-wider text-foreground/80">First Name</label>

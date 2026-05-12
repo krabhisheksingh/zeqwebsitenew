@@ -75,9 +75,7 @@ export default function Navbar() {
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           
-          <button className="hidden md:block bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:scale-105 active:scale-95 transition-transform">
-            Get Started
-          </button>
+
 
           <button 
             className="md:hidden p-2 rounded-full hover:bg-foreground/5 transition-colors"
@@ -102,9 +100,7 @@ export default function Navbar() {
               <Link to="/services" className={`text-lg font-medium transition-colors ${location.pathname === '/services' ? 'text-accent' : 'text-foreground'}`}>Services</Link>
               <Link to="/careers" className={`text-lg font-medium transition-colors ${location.pathname === '/careers' ? 'text-accent' : 'text-foreground'}`}>Careers</Link>
               <Link to="/contact" className={`text-lg font-medium transition-colors ${location.pathname === '/contact' ? 'text-accent' : 'text-foreground'}`}>Who We Are</Link>
-              <button className="bg-foreground text-background px-8 py-3 mt-4 rounded-full text-sm font-medium hover:scale-105 active:scale-95 transition-transform">
-                Get Started
-              </button>
+
             </nav>
           </motion.div>
         )}

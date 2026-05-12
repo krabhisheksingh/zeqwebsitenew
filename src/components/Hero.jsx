@@ -56,7 +56,6 @@ export default function Hero() {
           >
             Clarity in a complex world. We build systems that think, learn, and act with purpose.
           </motion.p>
-
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -66,9 +65,6 @@ export default function Hero() {
             <Link to="/pipeline" className="w-full sm:w-auto px-8 py-4 rounded-full bg-foreground text-background font-medium text-lg flex items-center justify-center gap-3 hover:scale-105 transition-transform duration-300 group">
               Get Started
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link to="/pipeline" className="w-full sm:w-auto px-8 py-4 rounded-full border border-border/50 hover:bg-foreground/5 font-medium text-lg transition-colors flex items-center justify-center">
-              Book Consultation
             </Link>
           </motion.div>
         </motion.div>
