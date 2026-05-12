@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Clock, CalendarOff, AlertCircle, Plus, Edit2, CheckCircle2, XCircle, Download, Bell, Search, X } from 'lucide-react';
+import { Users, Clock, CalendarOff, AlertCircle, Plus, Edit2, CheckCircle2, XCircle, Download, Bell, Search, X, UserCheck } from 'lucide-react';
 import HRNavbar from '../components/HRNavbar';
 import {
   getEmployees, addEmployee, updateEmployee, getAttendance, getLeaves,
-  updateLeaveStatus, getAnnouncements, addAnnouncement, getDashboardStats, exportAttendanceCSV,
+  updateLeaveStatus, getAnnouncements, addAnnouncement, getDashboardStats,
+  exportAttendanceCSV, getPendingRegistrations, approveRegistration, rejectRegistration,
 } from '../utils/hrStorage';
 
 const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -54,20 +55,22 @@ export default function AdminDashboard() {
   const [empForm, setEmpForm] = useState(INIT_EMP);
   const [editingEmp, setEditingEmp] = useState(null);
   const [annForm, setAnnForm] = useState({ title: '', body: '' });
+  const [pendingRegs, setPendingRegs] = useState([]);
 
   const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
 
   const refresh = async () => {
     setDataLoading(true);
     try {
-      const [emps, att, lvs, anns, st] = await Promise.all([
-        getEmployees(), getAttendance(), getLeaves(), getAnnouncements(), getDashboardStats(),
+      const [emps, att, lvs, anns, st, regs] = await Promise.all([
+        getEmployees(), getAttendance(), getLeaves(), getAnnouncements(), getDashboardStats(), getPendingRegistrations(),
       ]);
       setEmployees(emps);
       setAttendance(att);
       setLeaves(lvs);
       setAnnouncements(anns);
       setStats(st);
+      setPendingRegs(regs);
     } catch (err) {
       showToast('Error loading data', 'error');
     }
@@ -115,6 +118,18 @@ export default function AdminDashboard() {
     showToast('Announcement posted!');
   };
 
+  const handleApproveReg = async (id) => {
+    await approveRegistration(id);
+    await refresh();
+    showToast('Employee approved and activated!');
+  };
+
+  const handleRejectReg = async (id) => {
+    await rejectRegistration(id);
+    await refresh();
+    showToast('Registration rejected.', 'error');
+  };
+
   const filteredAttendance = attendance.filter(
     (r) => r.employeeName?.toLowerCase().includes(search.toLowerCase()) || r.date?.includes(search)
   );
@@ -124,6 +139,7 @@ export default function AdminDashboard() {
     { id: 'employees', label: 'Employees', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: Clock },
     { id: 'leaves', label: 'Leaves', icon: CalendarOff },
+    { id: 'registrations', label: `Registrations${pendingRegs.length ? ` (${pendingRegs.length})` : ''}`, icon: UserCheck },
     { id: 'announcements', label: 'Announcements', icon: Bell },
   ];
 
@@ -158,11 +174,12 @@ export default function AdminDashboard() {
           <>
             {tab === 'overview' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   <StatCard icon={Users} label="Total Employees" value={stats.totalEmployees ?? 0} color="bg-accent/20 text-accent" />
                   <StatCard icon={CheckCircle2} label="Present Today" value={stats.presentToday ?? 0} color="bg-green-500/20 text-green-400" />
                   <StatCard icon={CalendarOff} label="On Leave Today" value={stats.onLeaveToday ?? 0} color="bg-yellow-500/20 text-yellow-400" />
                   <StatCard icon={AlertCircle} label="Pending Leaves" value={stats.pendingLeaves ?? 0} color="bg-red-500/20 text-red-400" />
+                  <StatCard icon={UserCheck} label="Pending Signups" value={stats.pendingRegistrations ?? 0} color="bg-purple-500/20 text-purple-400" />
                 </div>
                 <div className="rounded-3xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
                   <div className="p-6 border-b border-border/30 flex items-center justify-between">
@@ -265,7 +282,7 @@ export default function AdminDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="border-b border-border/30 bg-background/30">
-                        <tr>{['Employee', 'Date', 'Check-In', 'Check-Out', 'Hours', 'Status'].map((h) => (
+                        <tr>{['Employee', 'Date', 'Check-In', 'Check-Out', 'Break', 'Hours Worked', 'Status'].map((h) => (
                           <th key={h} className="text-left px-5 py-3 text-xs uppercase tracking-wider text-foreground/40 font-semibold">{h}</th>
                         ))}</tr>
                       </thead>
@@ -276,6 +293,7 @@ export default function AdminDashboard() {
                             <td className="px-5 py-3">{fmtDate(r.date)}</td>
                             <td className="px-5 py-3 text-green-400">{fmt(r.checkIn)}</td>
                             <td className="px-5 py-3 text-red-400">{r.checkOut ? fmt(r.checkOut) : '—'}</td>
+                            <td className="px-5 py-3 text-yellow-400">{r.totalBreakMinutes ? `${Math.floor(r.totalBreakMinutes)}m` : '—'}</td>
                             <td className="px-5 py-3">{r.totalHours ? `${r.totalHours}h` : '—'}</td>
                             <td className="px-5 py-3"><StatusBadge status={r.status} /></td>
                           </tr>
@@ -319,6 +337,56 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </motion.div>
+            )}
+
+            {tab === 'registrations' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Pending Employee Registrations</h3>
+                  <span className="text-sm text-foreground/50">{pendingRegs.length} awaiting approval</span>
+                </div>
+                {pendingRegs.length === 0 ? (
+                  <div className="rounded-3xl border border-border/30 bg-card/50 backdrop-blur-sm p-12 text-center text-foreground/40">
+                    No pending registrations 🎉
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-border/30 bg-card/50 backdrop-blur-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="border-b border-border/30 bg-background/30">
+                          <tr>{['Name', 'Username', 'Department', 'Designation', 'Email', 'Phone', 'Actions'].map((h) => (
+                            <th key={h} className="text-left px-5 py-3 text-xs uppercase tracking-wider text-foreground/40 font-semibold">{h}</th>
+                          ))}</tr>
+                        </thead>
+                        <tbody>
+                          {pendingRegs.map((emp) => (
+                            <tr key={emp.id} className="border-b border-border/20 hover:bg-background/20 transition-colors">
+                              <td className="px-5 py-3 font-medium">{emp.fullName}</td>
+                              <td className="px-5 py-3 text-foreground/60">{emp.username}</td>
+                              <td className="px-5 py-3">{emp.department}</td>
+                              <td className="px-5 py-3">{emp.designation}</td>
+                              <td className="px-5 py-3 text-foreground/60">{emp.email}</td>
+                              <td className="px-5 py-3">{emp.phone}</td>
+                              <td className="px-5 py-3">
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleApproveReg(emp.id)}
+                                    className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-xs font-semibold hover:bg-green-500/30 transition-colors flex items-center gap-1">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                  </button>
+                                  <button onClick={() => handleRejectReg(emp.id)}
+                                    className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-colors flex items-center gap-1">
+                                    <XCircle className="w-3.5 h-3.5" /> Reject
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 

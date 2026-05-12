@@ -3,14 +3,14 @@ import {
   collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, query, where,
 } from 'firebase/firestore';
 
-// ── Session (localStorage — device-specific login state) ─────────────────────
+// ── Session ────────────────────────────────────────────────────────────────────
 export const getSession = () => {
   try { return JSON.parse(localStorage.getItem('hr_session')) || null; } catch { return null; }
 };
 export const setSession = (data) => localStorage.setItem('hr_session', JSON.stringify(data));
 export const clearSession = () => localStorage.removeItem('hr_session');
 
-// ── Seed initial data (runs once, checks before inserting) ───────────────────
+// ── Seed ──────────────────────────────────────────────────────────────────────
 export const seedInitialData = async () => {
   const empSnap = await getDocs(collection(db, 'employees'));
   if (empSnap.empty) {
@@ -31,7 +31,7 @@ export const seedInitialData = async () => {
   }
 };
 
-// ── Employees ─────────────────────────────────────────────────────────────────
+// ── Employees ──────────────────────────────────────────────────────────────────
 export const getEmployees = async () => {
   const snap = await getDocs(collection(db, 'employees'));
   return snap.docs.map((d) => ({ ...d.data() }));
@@ -48,73 +48,46 @@ export const updateEmployee = async (id, updates) => {
 };
 
 export const findEmployee = async (username, password) => {
-  const q = query(collection(db, 'employees'), where('username', '==', username), where('status', '==', 'active'));
+  const q = query(collection(db, 'employees'), where('username', '==', username));
   const snap = await getDocs(q);
-  if (snap.empty) return null;
+  if (snap.empty) return { result: null, reason: 'not_found' };
   const emp = snap.docs[0].data();
-  return emp.password === password ? emp : null;
+  if (emp.password !== password) return { result: null, reason: 'wrong_password' };
+  if (emp.status === 'pending_approval') return { result: null, reason: 'pending_approval' };
+  if (emp.status === 'rejected') return { result: null, reason: 'rejected' };
+  if (emp.status !== 'active') return { result: null, reason: 'inactive' };
+  return { result: emp, reason: null };
 };
 
-// ── Attendance ───────────────────────────────────────────────────────────────
-export const getAttendance = async () => {
-  const snap = await getDocs(collection(db, 'attendance'));
-  return snap.docs.map((d) => d.data()).sort((a, b) => new Date(b.date) - new Date(a.date));
-};
-
-export const getTodayRecord = async (employeeId) => {
-  const today = new Date().toISOString().split('T')[0];
-  const snap = await getDoc(doc(db, 'attendance', `${employeeId}_${today}`));
-  return snap.exists() ? snap.data() : null;
-};
-
-export const checkIn = async (employeeId, employeeName) => {
-  const today = new Date().toISOString().split('T')[0];
-  const docId = `${employeeId}_${today}`;
-  await setDoc(doc(db, 'attendance', docId), {
-    id: docId, employeeId, employeeName, date: today,
-    checkIn: new Date().toISOString(), checkOut: null,
-    breaks: [], onBreak: false, totalBreakMinutes: 0,
-    totalHours: null, status: 'present',
+// ── Employee Self-Registration ─────────────────────────────────────────────────
+export const registerEmployee = async (data) => {
+  // Check username/email uniqueness
+  const all = await getEmployees();
+  if (all.find((e) => e.username === data.username)) return { ok: false, msg: 'Username already taken.' };
+  if (all.find((e) => e.email === data.email)) return { ok: false, msg: 'Email already registered.' };
+  const newId = `EMP${Date.now()}`;
+  await setDoc(doc(db, 'employees', newId), {
+    id: newId, ...data, role: 'employee',
+    status: 'pending_approval', createdAt: new Date().toISOString(),
   });
+  return { ok: true };
 };
 
-export const checkOut = async (employeeId) => {
-  const today = new Date().toISOString().split('T')[0];
-  const ref = doc(db, 'attendance', `${employeeId}_${today}`);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-  const record = snap.data();
-  if (record.onBreak) {
-    // End any open break before checking out
-    await endBreak(employeeId);
-  }
-  const freshSnap = await getDoc(ref);
-  const fresh = freshSnap.data();
-  const now = new Date();
-  const totalMinutes = (now - new Date(fresh.checkIn)) / 60000;
-  const breakMinutes = fresh.totalBreakMinutes || 0;
-  const workedMinutes = Math.max(0, totalMinutes - breakMinutes);
-  const hours = parseFloat((workedMinutes / 60).toFixed(2));
-  await updateDoc(ref, {
-    checkOut: now.toISOString(),
-    totalHours: hours,
-    onBreak: false,
-    status: hours >= 8 ? 'present' : hours >= 4 ? 'half-day' : 'present',
-  });
+export const getPendingRegistrations = async () => {
+  const q = query(collection(db, 'employees'), where('status', '==', 'pending_approval'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data());
 };
 
-export const startBreak = async (employeeId) => {
-  const today = new Date().toISOString().split('T')[0];
-  const ref = doc(db, 'attendance', `${employeeId}_${today}`);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-  const record = snap.data();
-  if (record.checkOut || record.onBreak) return;
-  const breaks = record.breaks || [];
-  breaks.push({ start: new Date().toISOString(), end: null });
-  await updateDoc(ref, { breaks, onBreak: true });
+export const approveRegistration = async (id) => {
+  await updateDoc(doc(db, 'employees', id), { status: 'active', approvedAt: new Date().toISOString() });
 };
 
+export const rejectRegistration = async (id) => {
+  await updateDoc(doc(db, 'employees', id), { status: 'rejected', rejectedAt: new Date().toISOString() });
+};
+
+// ── Attendance — BREAK functions defined FIRST to avoid hoisting issues ────────
 export const endBreak = async (employeeId) => {
   const today = new Date().toISOString().split('T')[0];
   const ref = doc(db, 'attendance', `${employeeId}_${today}`);
@@ -134,6 +107,67 @@ export const endBreak = async (employeeId) => {
   await updateDoc(ref, { breaks, onBreak: false, totalBreakMinutes });
 };
 
+export const startBreak = async (employeeId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const ref = doc(db, 'attendance', `${employeeId}_${today}`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const record = snap.data();
+  if (record.checkOut || record.onBreak) return;
+  const breaks = [...(record.breaks || [])];
+  breaks.push({ start: new Date().toISOString(), end: null });
+  await updateDoc(ref, { breaks, onBreak: true });
+};
+
+export const getAttendance = async () => {
+  const snap = await getDocs(collection(db, 'attendance'));
+  return snap.docs.map((d) => d.data()).sort((a, b) => new Date(b.date) - new Date(a.date));
+};
+
+export const getTodayRecord = async (employeeId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const snap = await getDoc(doc(db, 'attendance', `${employeeId}_${today}`));
+  return snap.exists() ? snap.data() : null;
+};
+
+export const checkIn = async (employeeId, employeeName) => {
+  const today = new Date().toISOString().split('T')[0];
+  const docId = `${employeeId}_${today}`;
+  // Guard: only check in once per day
+  const existing = await getDoc(doc(db, 'attendance', docId));
+  if (existing.exists()) return false; // already checked in
+  await setDoc(doc(db, 'attendance', docId), {
+    id: docId, employeeId, employeeName, date: today,
+    checkIn: new Date().toISOString(), checkOut: null,
+    breaks: [], onBreak: false, totalBreakMinutes: 0,
+    totalHours: null, status: 'present',
+  });
+  return true;
+};
+
+export const checkOut = async (employeeId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const ref = doc(db, 'attendance', `${employeeId}_${today}`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const record = snap.data();
+  if (record.checkOut) return; // already checked out
+  // End any open break first (endBreak is defined above — no hoisting issue)
+  if (record.onBreak) await endBreak(employeeId);
+  // Re-fetch fresh record after break end
+  const freshSnap = await getDoc(ref);
+  const fresh = freshSnap.data();
+  const now = new Date();
+  const totalMinutes = (now - new Date(fresh.checkIn)) / 60000;
+  const breakMinutes = fresh.totalBreakMinutes || 0;
+  const workedMinutes = Math.max(0, totalMinutes - breakMinutes);
+  const hours = parseFloat((workedMinutes / 60).toFixed(2));
+  await updateDoc(ref, {
+    checkOut: now.toISOString(), totalHours: hours, onBreak: false,
+    status: hours >= 8 ? 'present' : hours >= 4 ? 'half-day' : 'present',
+  });
+};
+
 export const getEmployeeAttendance = async (employeeId, days = 30) => {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -143,7 +177,7 @@ export const getEmployeeAttendance = async (employeeId, days = 30) => {
   return snap.docs.map((d) => d.data()).sort((a, b) => new Date(b.date) - new Date(a.date));
 };
 
-// ── Leaves ───────────────────────────────────────────────────────────────────
+// ── Leaves ────────────────────────────────────────────────────────────────────
 export const getLeaves = async () => {
   const snap = await getDocs(collection(db, 'leaves'));
   return snap.docs.map((d) => ({ ...d.data(), _docId: d.id })).sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
@@ -163,7 +197,7 @@ export const getEmployeeLeaves = async (employeeId) => {
   return snap.docs.map((d) => ({ ...d.data(), _docId: d.id })).sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
 };
 
-// ── Announcements ────────────────────────────────────────────────────────────
+// ── Announcements ─────────────────────────────────────────────────────────────
 export const getAnnouncements = async () => {
   const snap = await getDocs(collection(db, 'announcements'));
   return snap.docs.map((d) => ({ ...d.data(), id: d.id })).sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
@@ -173,26 +207,29 @@ export const addAnnouncement = async (ann) => {
   await addDoc(collection(db, 'announcements'), { ...ann, postedAt: new Date().toISOString(), postedBy: 'superadmin' });
 };
 
-// ── Dashboard Stats ──────────────────────────────────────────────────────────
+// ── Dashboard Stats ───────────────────────────────────────────────────────────
 export const getDashboardStats = async () => {
   const today = new Date().toISOString().split('T')[0];
-  const [employees, attendance, leaves] = await Promise.all([getEmployees(), getAttendance(), getLeaves()]);
+  const [employees, attendance, leaves, pending] = await Promise.all([
+    getEmployees(), getAttendance(), getLeaves(), getPendingRegistrations(),
+  ]);
   return {
     totalEmployees: employees.filter((e) => e.status === 'active').length,
     presentToday: attendance.filter((r) => r.date === today).length,
     onLeaveToday: leaves.filter((l) => l.status === 'approved' && l.fromDate <= today && l.toDate >= today).length,
     pendingLeaves: leaves.filter((l) => l.status === 'pending').length,
+    pendingRegistrations: pending.length,
   };
 };
 
 // ── Export CSV ────────────────────────────────────────────────────────────────
 export const exportAttendanceCSV = async () => {
   const records = await getAttendance();
-  const header = 'Employee Name,Employee ID,Date,Check-In,Check-Out,Total Hours,Status\n';
+  const header = 'Employee Name,Employee ID,Date,Check-In,Check-Out,Break (mins),Total Hours,Status\n';
   const rows = records.map((r) => {
     const ci = r.checkIn ? new Date(r.checkIn).toLocaleTimeString() : '-';
     const co = r.checkOut ? new Date(r.checkOut).toLocaleTimeString() : '-';
-    return `"${r.employeeName}","${r.employeeId}","${r.date}","${ci}","${co}","${r.totalHours ?? '-'}","${r.status}"`;
+    return `"${r.employeeName}","${r.employeeId}","${r.date}","${ci}","${co}","${r.totalBreakMinutes ?? 0}","${r.totalHours ?? '-'}","${r.status}"`;
   });
   const csv = header + rows.join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
