@@ -25,7 +25,7 @@ const teamMembers = [
     role: "Technical Head",
     image: "/abhishek.jpg",
     objectPos: "top",
-    bio: "Architecting robust, scalable, and cutting-edge software solutions.",
+    bio: "Building smart and reliable technology solutions while leading the team with creativity and clarity. Focused on turning ideas into impactful digital experiences, ensuring every project is developed with innovation, quality, and attention to detail.",
     social: { linkedin: "#", twitter: "#" }
   },
   {
@@ -341,7 +341,7 @@ export default function Contact() {
                       value={formState.name}
                       onChange={e => setFormState({...formState, name: e.target.value})}
                       className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 outline-none focus:border-accent focus:bg-background/80 transition-all font-light"
-                      placeholder="Abhiraj Singh"
+                      placeholder="Your Name"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -353,7 +353,7 @@ export default function Contact() {
                       value={formState.email}
                       onChange={e => setFormState({...formState, email: e.target.value})}
                       className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 outline-none focus:border-accent focus:bg-background/80 transition-all font-light"
-                      placeholder="abhiraj@gmail.com"
+                      placeholder="your@email.com"
                     />
                   </div>
                 </div>
