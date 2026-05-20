@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, UserPlus, FileText, Download, CheckCircle2, 
   XCircle, Bell, Calendar, Home, LogOut, Menu,
-  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark, Trash2
+  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark, Trash2, Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -305,6 +305,22 @@ export default function AdminDashboard() {
       } catch (err) {
         toast.error('Failed to delete announcement');
       }
+    }
+  };
+
+  const handleToggleBankEdit = async (employeeId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      await updateEmployee(employeeId, { allowBankEdit: newStatus });
+      toast.success(newStatus ? 'Bank details editing unlocked' : 'Bank details editing locked');
+      
+      // Update details modal state if open for this employee
+      if (selectedEmpDetails && selectedEmpDetails.id === employeeId) {
+        setSelectedEmpDetails(prev => ({ ...prev, allowBankEdit: newStatus }));
+      }
+      refresh();
+    } catch (err) {
+      toast.error('Failed to update bank edit permission');
     }
   };
 
@@ -636,6 +652,18 @@ export default function AdminDashboard() {
                                       ) : (
                                         <span className="text-white/20 text-xs italic">No Bank Details</span>
                                       )}
+                                      <button 
+                                        onClick={() => handleToggleBankEdit(e.id, e.allowBankEdit)} 
+                                        className={`text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                                          e.allowBankEdit 
+                                            ? 'text-green-400 hover:text-green-300 font-semibold' 
+                                            : 'text-white/40 hover:text-white/60'
+                                        }`}
+                                        title={e.allowBankEdit ? "Lock Bank Editing" : "Allow Bank Editing"}
+                                      >
+                                        {e.allowBankEdit ? <ShieldCheck className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                                        {e.allowBankEdit ? 'Unlocked' : 'Locked'}
+                                      </button>
                                       <button onClick={() => startEditEmp(e)} className="text-accent-cyan hover:text-white underline text-xs">Edit</button>
                                       <button onClick={() => handleDeleteEmployee(e.id, e.fullName)} className="text-red-400 hover:text-red-300 underline text-xs">Delete</button>
                                     </div>
@@ -1374,6 +1402,17 @@ export default function AdminDashboard() {
                     <p className="text-xs text-white/40 mt-1 font-mono">Employee ID: {emp.id} | Joined: {emp.dateOfJoining ? fmtDate(emp.dateOfJoining) : 'N/A'}</p>
                   </div>
                   <div className="shrink-0 flex gap-3">
+                    <button 
+                      onClick={() => handleToggleBankEdit(emp.id, emp.allowBankEdit)}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        emp.allowBankEdit 
+                          ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
+                          : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {emp.allowBankEdit ? <ShieldCheck className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                      {emp.allowBankEdit ? 'Lock Bank Edit' : 'Unlock Bank Edit'}
+                    </button>
                     <button 
                       onClick={() => {
                         setSelectedEmpDetails(null);

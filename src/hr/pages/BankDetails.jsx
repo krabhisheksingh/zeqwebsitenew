@@ -65,6 +65,9 @@ export default function BankDetails() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (employee?.bankDetails && !employee?.allowBankEdit) {
+      return toast.error('Editing is locked. Please request permission from Admin.');
+    }
     if (form.accountNumber !== form.confirmAccountNumber) {
       return toast.error('Account numbers do not match');
     }
@@ -86,8 +89,11 @@ export default function BankDetails() {
         upiId: form.upiId
       };
 
-      await updateEmployee(session.employeeId, { bankDetails });
-      setEmployee({ ...employee, bankDetails });
+      await updateEmployee(session.employeeId, { 
+        bankDetails,
+        allowBankEdit: false 
+      });
+      setEmployee({ ...employee, bankDetails, allowBankEdit: false });
       setIsEditing(false);
       toast.success('Bank details saved securely!');
     } catch (err) {
@@ -235,12 +241,18 @@ export default function BankDetails() {
                     <h3 className="font-heading font-bold text-lg text-white flex items-center gap-2">
                       <ShieldCheck className="w-5 h-5 text-green-400" /> Account Active
                     </h3>
-                    <button 
-                      onClick={() => setIsEditing(true)}
-                      className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all border border-purple-500/30 flex items-center gap-2 text-xs font-bold"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" /> Edit Details
-                    </button>
+                    {employee?.allowBankEdit ? (
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all border border-purple-500/30 flex items-center gap-2 text-xs font-bold"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" /> Edit Details
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-white/40 text-xs bg-white/5 px-3 py-1.5 rounded-xl border border-white/10 select-none">
+                        <Lock className="w-3.5 h-3.5 text-purple-400 animate-pulse" /> Editing Locked
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
