@@ -4,7 +4,7 @@ import {
   Clock, History, FileText, Bell, User, CheckCircle2, 
   XCircle, AlertCircle, Calendar, Home, LogOut, Menu,
   Briefcase, DollarSign, File, HelpCircle, Award, Eye, EyeOff, Shield,
-  Download, Phone, UserPlus, RefreshCw, Landmark
+  Download, Phone, UserPlus, RefreshCw, Landmark, Trophy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -60,6 +60,7 @@ export default function EmployeeDashboard() {
   const [recognitions, setRecognitions] = useState([]);
   const [globalTasks, setGlobalTasks] = useState([]);
   const [empData, setEmpData] = useState(null);
+  const [employees, setEmployees] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -236,6 +237,7 @@ export default function EmployeeDashboard() {
       setRecognitions(recs);
       setGlobalTasks(gTks);
       setEmpData(allEmps.find((e) => e.id === session.employeeId) || null);
+      setEmployees(allEmps);
     } catch (err) {
       toast.error('Error loading data');
       console.error(err);
@@ -261,6 +263,48 @@ export default function EmployeeDashboard() {
     });
 
     return maxSales > 0 ? { name: starName, sales: maxSales } : null;
+  };
+
+  const getEmployeeRankings = () => {
+    const salesByEmpId = {};
+    const callsByEmpId = {};
+    const leadsByEmpId = {};
+    const followupsByEmpId = {};
+
+    globalTasks.forEach(t => {
+      if (t.employeeId) {
+        salesByEmpId[t.employeeId] = (salesByEmpId[t.employeeId] || 0) + (Number(t.sales) || 0);
+        callsByEmpId[t.employeeId] = (callsByEmpId[t.employeeId] || 0) + (Number(t.calls) || 0);
+        leadsByEmpId[t.employeeId] = (leadsByEmpId[t.employeeId] || 0) + (Number(t.leads) || 0);
+        followupsByEmpId[t.employeeId] = (followupsByEmpId[t.employeeId] || 0) + (Number(t.followups) || 0);
+      }
+    });
+
+    const rankedList = employees.map(emp => {
+      const sales = salesByEmpId[emp.id] || 0;
+      const calls = callsByEmpId[emp.id] || 0;
+      const leads = leadsByEmpId[emp.id] || 0;
+      const followups = followupsByEmpId[emp.id] || 0;
+      return {
+        ...emp,
+        totalSales: sales,
+        totalCalls: calls,
+        totalLeads: leads,
+        totalFollowups: followups
+      };
+    });
+
+    rankedList.sort((a, b) => {
+      if (b.totalSales !== a.totalSales) {
+        return b.totalSales - a.totalSales;
+      }
+      if (b.totalLeads !== a.totalLeads) {
+        return b.totalLeads - a.totalLeads;
+      }
+      return a.fullName.localeCompare(b.fullName);
+    });
+
+    return rankedList;
   };
 
   const handleLogout = () => {
@@ -623,6 +667,102 @@ export default function EmployeeDashboard() {
                         </div>
                       );
                     })()}
+
+                    {/* Performance Leaderboard */}
+                    <div className="glass-panel p-8 rounded-3xl space-y-6">
+                      <div>
+                        <h3 className="font-heading font-bold text-xl text-white flex items-center gap-2">
+                          <Trophy className="w-5.5 h-5.5 text-yellow-400" /> Performance Leaderboard
+                        </h3>
+                        <p className="text-white/40 text-xs mt-1">Real-time rankings based on cumulative closed sales and productivity metrics.</p>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-white/10 text-white/40 uppercase tracking-widest text-[10px] font-semibold">
+                              <th className="py-3 px-4 text-center w-24">Rank</th>
+                              <th className="py-3 px-4">Employee</th>
+                              <th className="py-3 px-4 text-center">Sales Closed</th>
+                              <th className="py-3 px-4 text-center">Leads Generated</th>
+                              <th className="py-3 px-4 text-center">Calls Made</th>
+                              <th className="py-3 px-4 text-center">Follow-ups</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5 font-sans">
+                            {getEmployeeRankings().map((emp, index) => {
+                              const rank = index + 1;
+                              const isSelf = emp.id === session.employeeId;
+                              let rankBadge = `#${rank}`;
+                              let rankColorClass = "text-white/60";
+                              let rankBgClass = "bg-white/5";
+                              if (rank === 1) {
+                                rankBadge = "🥇 1st";
+                                rankColorClass = "text-yellow-400 font-bold";
+                                rankBgClass = "bg-yellow-500/10 border border-yellow-500/20";
+                              } else if (rank === 2) {
+                                rankBadge = "🥈 2nd";
+                                rankColorClass = "text-slate-300 font-bold";
+                                rankBgClass = "bg-slate-300/10 border border-slate-300/20";
+                              } else if (rank === 3) {
+                                rankBadge = "🥉 3rd";
+                                rankColorClass = "text-amber-600 font-bold";
+                                rankBgClass = "bg-amber-600/10 border border-amber-600/20";
+                              }
+
+                              return (
+                                <tr 
+                                  key={emp.id} 
+                                  className={`transition-all duration-200 ${
+                                    isSelf 
+                                      ? 'bg-accent-violet/10 border-y border-accent-violet/25 hover:bg-accent-violet/15' 
+                                      : 'hover:bg-white/5'
+                                  }`}
+                                >
+                                  <td className="py-4 px-4 text-center">
+                                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs ${rankColorClass} ${rankBgClass}`}>
+                                      {rankBadge}
+                                    </span>
+                                  </td>
+                                  <td className="py-4 px-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-bold text-accent-cyan text-xs uppercase shrink-0 overflow-hidden">
+                                        {emp.avatar ? (
+                                          <img src={emp.avatar} alt={emp.fullName} className="w-full h-full object-cover" />
+                                        ) : (
+                                          emp.fullName.split(' ').map(n => n[0]).join('')
+                                        )}
+                                      </div>
+                                      <div>
+                                        <span className="font-semibold text-white flex items-center gap-1.5">
+                                          {emp.fullName}
+                                          {isSelf && (
+                                            <span className="px-1.5 py-0.5 rounded text-[8px] bg-accent-violet/30 border border-accent-violet/50 text-accent-violet font-bold uppercase tracking-wider animate-pulse">You</span>
+                                          )}
+                                        </span>
+                                        <span className="text-[10px] text-white/40">{emp.designation} • {emp.department}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-4 px-4 text-center font-bold text-purple-400 font-mono text-base">
+                                    {emp.totalSales}
+                                  </td>
+                                  <td className="py-4 px-4 text-center font-mono text-white/70">
+                                    {emp.totalLeads}
+                                  </td>
+                                  <td className="py-4 px-4 text-center font-mono text-white/70">
+                                    {emp.totalCalls}
+                                  </td>
+                                  <td className="py-4 px-4 text-center font-mono text-white/70">
+                                    {emp.totalFollowups}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <div className="lg:col-span-2 glass-panel p-6 rounded-3xl">
