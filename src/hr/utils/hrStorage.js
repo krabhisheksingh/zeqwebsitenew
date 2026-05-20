@@ -326,3 +326,8 @@ export const getAllPayslips = async () => {
 };
 
 export const addPayslip = async (payslip) => await addDoc(collection(db, 'payslips'), { ...payslip, createdAt: new Date().toISOString() });
+
+export const deleteEmployee = async (id) => {
+  await deleteDoc(doc(db, 'employees', id));
+};
+

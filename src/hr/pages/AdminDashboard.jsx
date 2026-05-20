@@ -12,12 +12,20 @@ import {
   exportAttendanceCSV, getDashboardStats, HOLIDAYS_2026, clearSession,
   getAllTasks, getAllTickets, updateTicketStatus, getAllDocuments, updateDocumentStatus,
   getAllPayslips, addPayslip, addRecognition, getRecognitions, addEmployee, updateEmployee,
-  wipeAllEmployeeData
+  wipeAllEmployeeData, deleteEmployee
 } from '../utils/hrStorage';
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
 
-const fmtDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmtDate = (d) => {
+  if (!d) return '—';
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return '—';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
 
 const StatusBadge = ({ status }) => {
@@ -77,6 +85,8 @@ export default function AdminDashboard() {
   const [selectedPayslip, setSelectedPayslip] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [selectedEmpBank, setSelectedEmpBank] = useState(null);
+  const [selectedEmpDetails, setSelectedEmpDetails] = useState(null);
+  const [detailsTab, setDetailsTab] = useState('profile');
 
   const printPayslip = (p) => {
     const printWindow = window.open('', '_blank', 'width=800,height=900');
@@ -335,6 +345,21 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteEmployee = async (id, name) => {
+    if (window.confirm(`Are you sure you want to permanently delete the employee account for "${name || 'this employee'}"? This action cannot be undone.`)) {
+      try {
+        await deleteEmployee(id);
+        toast.success('Employee account deleted successfully!');
+        if (selectedEmpDetails && selectedEmpDetails.id === id) {
+          setSelectedEmpDetails(null);
+        }
+        refresh();
+      } catch (err) {
+        toast.error('Failed to delete employee account');
+      }
+    }
+  };
+
   const NAV_ITEMS = [
     { id: 'overview', label: 'Command Center', icon: Home },
     { id: 'employees', label: 'Employees', icon: Users },
@@ -551,7 +576,15 @@ export default function AdminDashboard() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <>{e.fullName}<br/><span className="text-[10px] text-white/40">{e.designation}</span></>
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setSelectedEmpDetails(e)} 
+                                      className="text-left group cursor-pointer hover:text-accent-cyan transition-colors duration-200"
+                                    >
+                                      <span className="font-semibold text-white group-hover:text-accent-cyan border-b border-transparent group-hover:border-accent-cyan transition-all duration-200">{e.fullName}</span>
+                                      <br/>
+                                      <span className="text-[10px] text-white/40 group-hover:text-white/60">{e.designation}</span>
+                                    </button>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 text-white/60">
@@ -592,6 +625,7 @@ export default function AdminDashboard() {
                                         <span className="text-white/20 text-xs italic">No Bank Details</span>
                                       )}
                                       <button onClick={() => startEditEmp(e)} className="text-accent-cyan hover:text-white underline text-xs">Edit</button>
+                                      <button onClick={() => handleDeleteEmployee(e.id, e.fullName)} className="text-red-400 hover:text-red-300 underline text-xs">Delete</button>
                                     </div>
                                   )}
                                 </td>
@@ -1247,6 +1281,326 @@ export default function AdminDashboard() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* ── EMPLOYEE FULL DETAILS MODAL ── */}
+      <AnimatePresence>
+        {selectedEmpDetails && (() => {
+          const emp = selectedEmpDetails;
+          const empAttendance = attendance.filter(r => r.employeeId === emp.id);
+          const empLeaves = leaves.filter(l => l.employeeId === emp.id);
+          const empTasks = tasks.filter(t => t.employeeId === emp.id);
+          const empDocs = documents.filter(d => d.employeeId === emp.id);
+          const empRecognitions = recognitions.filter(r => r.employeeId === emp.id);
+          
+          const presentCount = empAttendance.filter(r => r.status === 'present').length;
+          const halfDayCount = empAttendance.filter(r => r.status === 'half-day').length;
+          const totalDays = empAttendance.length;
+          const attRate = totalDays > 0 ? (((presentCount + (halfDayCount * 0.5)) / totalDays) * 100).toFixed(1) : '100';
+
+          const totalSales = empTasks.reduce((acc, t) => acc + (Number(t.sales) || 0), 0);
+          const totalCalls = empTasks.reduce((acc, t) => acc + (Number(t.calls) || 0), 0);
+          const totalLeads = empTasks.reduce((acc, t) => acc + (Number(t.leads) || 0), 0);
+          const totalFollowups = empTasks.reduce((acc, t) => acc + (Number(t.followups) || 0), 0);
+          
+          const approvedLeaves = empLeaves.filter(l => l.status === 'approved').length;
+          const pendingLeavesCount = empLeaves.filter(l => l.status === 'pending').length;
+
+          return (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }} 
+                animate={{ scale: 1, y: 0 }} 
+                exit={{ scale: 0.9, y: 20 }} 
+                className="w-full max-w-4xl bg-black/90 border border-white/10 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+              >
+                {/* Decorative background glow */}
+                <div className="absolute top-[-20%] left-[-20%] w-full h-full bg-accent/10 blur-[80px] pointer-events-none mix-blend-screen"></div>
+
+                {/* Close Button */}
+                <button 
+                  onClick={() => setSelectedEmpDetails(null)} 
+                  className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors z-20"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+
+                {/* Header Spotlight */}
+                <div className="flex flex-col md:flex-row items-center gap-6 border-b border-white/10 pb-6 mb-6 relative z-10">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-accent-violet to-accent-cyan p-0.5 overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.3)] shrink-0">
+                    <div className="w-full h-full rounded-[14px] bg-background flex items-center justify-center overflow-hidden">
+                      {emp.avatar ? (
+                        <img src={emp.avatar} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <Users className="w-10 h-10 text-white/80" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-center md:text-left flex-1 font-sans">
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                      <h2 className="text-2xl font-heading font-bold text-white tracking-wide">{emp.fullName}</h2>
+                      <StatusBadge status={emp.status} />
+                    </div>
+                    <p className="text-sm text-accent-cyan font-semibold mt-1">{emp.designation} • <span className="text-white/60 font-normal">{emp.department}</span></p>
+                    <p className="text-xs text-white/40 mt-1 font-mono">Employee ID: {emp.id} | Joined: {emp.dateOfJoining ? fmtDate(emp.dateOfJoining) : 'N/A'}</p>
+                  </div>
+                  <div className="shrink-0 flex gap-3">
+                    <button 
+                      onClick={() => {
+                        setSelectedEmpDetails(null);
+                        startEditEmp(emp);
+                      }}
+                      className="px-4 py-2 bg-accent-violet/20 text-accent-violet rounded-xl border border-accent-violet/30 text-xs font-semibold hover:bg-accent-violet/30 transition-all cursor-pointer"
+                    >
+                      Quick Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteEmployee(emp.id, emp.fullName)}
+                      className="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 text-xs font-semibold hover:bg-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      Delete Account
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tab Navigation */}
+                <div className="flex gap-2 border-b border-white/5 pb-3 mb-6 overflow-x-auto scrollbar-hide shrink-0 relative z-10">
+                  {[
+                    { id: 'profile', label: 'Overview & Stats' },
+                    { id: 'worklogs', label: 'Work Logs' },
+                    { id: 'leaves', label: 'Attendance & Leaves' },
+                    { id: 'bankdocs', label: 'Bank & Docs' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setDetailsTab(t.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 cursor-pointer ${
+                        detailsTab === t.id 
+                          ? 'bg-white/10 text-white border-white/20' 
+                          : 'bg-transparent text-white/50 border-transparent hover:text-white/80 hover:bg-white/5'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto mb-6 relative z-10 pr-1">
+                  {detailsTab === 'profile' && (
+                    <div className="space-y-6">
+                      {/* Stats cards grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[
+                          { label: 'Attendance Rate', val: `${attRate}%`, desc: `${presentCount} Present / ${totalDays} Total`, color: 'text-green-400' },
+                          { label: 'Sales Closed', val: totalSales, desc: `${totalLeads} Leads / ${totalCalls} Calls`, color: 'text-purple-400' },
+                          { label: 'Approved Leaves', val: approvedLeaves, desc: `${pendingLeavesCount} Pending Request(s)`, color: 'text-yellow-400' },
+                          { label: 'Company Awards', val: empRecognitions.length, desc: 'Recognitions Received', color: 'text-accent-cyan' }
+                        ].map((card, idx) => (
+                          <div key={idx} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col justify-between">
+                            <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">{card.label}</p>
+                            <p className={`text-2xl font-bold font-mono my-2 ${card.color}`}>{card.val}</p>
+                            <p className="text-[10px] text-white/50">{card.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Detail list */}
+                      <div className="bg-white/5 border border-white/5 rounded-2xl p-5 space-y-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/5 pb-2 mb-3">Primary Contact & Security</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div className="flex justify-between border-b border-white/5 pb-2 md:border-0 md:pb-0">
+                            <span className="text-white/45">Email ID:</span>
+                            <span className="text-white font-medium">{emp.email || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-white/5 pb-2 md:border-0 md:pb-0">
+                            <span className="text-white/45">Phone Number:</span>
+                            <span className="text-white font-medium">{emp.phone || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-white/5 pb-2 md:border-0 md:pb-0">
+                            <span className="text-white/45">Username:</span>
+                            <span className="text-white font-mono">{emp.username || emp.id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-white/45">System Password:</span>
+                            <span className="text-white font-mono">{emp.password}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {detailsTab === 'worklogs' && (
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-white">Task Submissions</h4>
+                      {empTasks.length === 0 ? (
+                        <div className="text-center p-8 bg-white/5 border border-white/5 rounded-2xl text-white/40 text-xs">
+                          No work logs recorded for this employee.
+                        </div>
+                      ) : (
+                        <div className="border border-white/5 rounded-2xl overflow-hidden bg-white/5">
+                          <table className="w-full text-xs text-left">
+                            <thead className="bg-white/10 text-white/50 uppercase tracking-widest text-[9px]">
+                              <tr>
+                                <th className="px-4 py-3 font-semibold">Date</th>
+                                <th className="px-4 py-3 font-semibold text-center">Calls</th>
+                                <th className="px-4 py-3 font-semibold text-center">Leads</th>
+                                <th className="px-4 py-3 font-semibold text-center">Follow-ups</th>
+                                <th className="px-4 py-3 font-semibold text-center">Sales</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                              {empTasks.map((t, idx) => (
+                                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                  <td className="px-4 py-3 text-white/80">{fmtDate(t.createdAt)}</td>
+                                  <td className="px-4 py-3 text-center font-mono font-medium text-accent-cyan">{t.calls ?? '—'}</td>
+                                  <td className="px-4 py-3 text-center font-mono font-medium text-green-400">{t.leads ?? '—'}</td>
+                                  <td className="px-4 py-3 text-center font-mono font-medium text-yellow-400">{t.followups ?? '—'}</td>
+                                  <td className="px-4 py-3 text-center font-mono font-bold text-purple-400">{t.sales ?? '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {detailsTab === 'leaves' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Attendance log */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-white">Recent Attendance Logs</h4>
+                        {empAttendance.length === 0 ? (
+                          <div className="p-6 bg-white/5 border border-white/5 rounded-2xl text-center text-white/40 text-xs">
+                            No attendance logs.
+                          </div>
+                        ) : (
+                          <div className="max-h-[300px] overflow-y-auto border border-white/5 rounded-2xl bg-white/5 divide-y divide-white/5">
+                            {empAttendance.slice(0, 15).map((log, idx) => (
+                              <div key={idx} className="flex justify-between items-center p-3 text-xs hover:bg-white/5 transition-colors">
+                                <div>
+                                  <p className="text-white font-medium">{fmtDate(log.date)}</p>
+                                  <p className="text-[10px] text-white/40">{fmtTime(log.checkIn)} → {fmtTime(log.checkOut)}</p>
+                                </div>
+                                <StatusBadge status={log.status} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Leaves log */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-white">Leave Requests</h4>
+                        {empLeaves.length === 0 ? (
+                          <div className="p-6 bg-white/5 border border-white/5 rounded-2xl text-center text-white/40 text-xs">
+                            No leave requests applied.
+                          </div>
+                        ) : (
+                          <div className="max-h-[300px] overflow-y-auto border border-white/5 rounded-2xl bg-white/5 divide-y divide-white/5">
+                            {empLeaves.map((l, idx) => (
+                              <div key={idx} className="p-3 text-xs hover:bg-white/5 transition-colors">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="capitalize font-semibold text-white">{l.type} Leave</span>
+                                  <StatusBadge status={l.status} />
+                                </div>
+                                <p className="text-[10px] text-white/40">{fmtDate(l.fromDate)} → {fmtDate(l.toDate)}</p>
+                                <p className="text-white/60 mt-1 italic text-[11px]">"{l.reason}"</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailsTab === 'bankdocs' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Bank Details */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-white">Bank Account Credentials</h4>
+                        {emp.bankDetails ? (
+                          <div className="w-full h-40 rounded-2xl p-4 flex flex-col justify-between border border-white/10 bg-gradient-to-br from-[#1d1b38] via-[#0f0e21] to-[#2b2157] relative overflow-hidden shadow-lg">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[8px] tracking-widest text-purple-400 font-semibold uppercase">Zexora Corporate</span>
+                                <h3 className="text-[11px] font-semibold text-white/70 mt-0.5 uppercase">{emp.bankDetails.bankName}</h3>
+                              </div>
+                              <span className="px-2 py-0.5 text-[8px] rounded bg-green-500/15 border border-green-500/30 text-green-400 uppercase font-semibold">Active</span>
+                            </div>
+
+                            <div className="my-1">
+                              <p className="text-sm font-mono font-semibold tracking-wider text-white">
+                                {emp.bankDetails.accountNumber}
+                              </p>
+                            </div>
+
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <span className="text-[7px] uppercase tracking-wider text-white/30 block">Holder</span>
+                                <span className="text-[10px] font-semibold text-white/80 uppercase truncate max-w-[120px] inline-block">{emp.bankDetails.holderName}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[7px] uppercase tracking-wider text-white/30 block">IFSC</span>
+                                <span className="text-[10px] font-semibold font-mono text-purple-400 uppercase">{emp.bankDetails.ifscCode}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-8 bg-white/5 border border-white/5 rounded-2xl text-center text-white/40 text-xs italic">
+                            No Bank account registered by the employee.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Documents */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-white">Documents Vault</h4>
+                        {empDocs.length === 0 ? (
+                          <div className="p-8 bg-white/5 border border-white/5 rounded-2xl text-center text-white/40 text-xs">
+                            No documents uploaded.
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-[170px] overflow-y-auto">
+                            {empDocs.map((docItem, idx) => (
+                              <div key={idx} className="flex justify-between items-center p-3 bg-white/5 border border-white/5 rounded-xl text-xs">
+                                <span className="text-white font-medium truncate max-w-[150px]">{docItem.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <StatusBadge status={docItem.status} />
+                                  <button 
+                                    onClick={() => setSelectedDocument(docItem)}
+                                    className="p-1 text-accent-cyan hover:text-white transition-colors cursor-pointer"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-white/10 shrink-0">
+                  <button 
+                    onClick={() => setSelectedEmpDetails(null)} 
+                    className="px-6 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-all border border-white/10 text-xs font-semibold cursor-pointer"
+                  >
+                    Close Profile
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
