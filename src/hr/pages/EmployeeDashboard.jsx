@@ -16,6 +16,7 @@ import {
 } from '../utils/hrStorage';
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
+import ChessGame from '../components/ChessGame';
 
 const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
 const fmtDate = (d) => {
@@ -468,6 +469,7 @@ export default function EmployeeDashboard() {
     { id: 'helpdesk', label: 'Help Desk', icon: HelpCircle },
     { id: 'holidays', label: 'Calendar', icon: Calendar },
     { id: 'recognition', label: 'Wall of Fame', icon: Award },
+    { id: 'chess', label: 'Chess Zone', icon: Trophy },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
@@ -1383,6 +1385,20 @@ export default function EmployeeDashboard() {
                         Update Password
                       </button>
                     </form>
+                  </div>
+                )}
+
+                {/* ── CHESS ZONE TAB ── */}
+                {tab === 'chess' && (
+                  <div className="space-y-6">
+                    <div className="glass-panel p-8 rounded-3xl relative overflow-hidden">
+                      <div className="relative z-10">
+                        <h2 className="text-3xl md:text-4xl font-heading font-bold mb-2">Chess Zone 👑</h2>
+                        <p className="text-white/60">Take a strategic break! Challenge the computer AI or play pass-and-play with a colleague.</p>
+                      </div>
+                      <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-purple-500/20 to-transparent pointer-events-none"></div>
+                    </div>
+                    <ChessGame />
                   </div>
                 )}
 
