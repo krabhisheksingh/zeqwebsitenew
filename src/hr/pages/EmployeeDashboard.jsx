@@ -641,6 +641,54 @@ export default function EmployeeDashboard() {
                       ))}
                     </div>
 
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2 glass-panel p-6 rounded-3xl">
+                        <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-accent"/> Today's Shift</h3>
+                        {todayRec ? (
+                          <div className="flex flex-col gap-4">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                              <div>
+                                <p className="text-sm text-white/50">Checked In At</p>
+                                <p className="text-xl font-bold text-green-400">{fmt(todayRec.checkIn)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-white/50">Status</p>
+                                <p className="text-xl font-bold text-white">{todayRec.onBreak ? '☕ On Break' : '👨‍💻 Working'}</p>
+                              </div>
+                            </div>
+                            {!todayRec.checkOut && (
+                              <div className="flex gap-4">
+                                <button onClick={todayRec.onBreak ? handleEndBreak : handleStartBreak} className="flex-1 py-3 rounded-xl bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-bold hover:bg-yellow-500/30 transition-all text-sm">
+                                  {todayRec.onBreak ? 'RESUME WORK' : 'START BREAK'}
+                                </button>
+                                <button onClick={handleCheckOut} className="flex-1 py-3 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 font-bold hover:bg-red-500/30 transition-all text-sm flex items-center justify-center gap-2">
+                                  <XCircle className="w-4 h-4" /> CHECK OUT
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center bg-white/5 rounded-xl border border-white/10">
+                            <p className="text-white/50 mb-4">You haven't checked in yet today.</p>
+                            <button onClick={handleCheckIn} className="px-8 py-3 rounded-full bg-accent text-white font-bold hover:shadow-[0_0_20px_rgba(79,142,247,0.4)] transition-all transform hover:scale-105">
+                              Check In Now
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="glass-panel p-6 rounded-3xl">
+                        <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2"><Bell className="w-5 h-5 text-accent-violet"/> Recent Activity</h3>
+                        <div className="space-y-4">
+                          {announcements.slice(0,3).map(a => (
+                            <div key={a.id} className="pb-4 border-b border-white/10 last:border-0 last:pb-0">
+                              <p className="text-sm font-medium text-white">{a.title}</p>
+                              <p className="text-xs text-white/40 mt-1">{fmtDate(a.postedAt)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Star Performer Spotlight */}
                     {(() => {
                       const star = getStarPerformer();
@@ -761,54 +809,6 @@ export default function EmployeeDashboard() {
                             })}
                           </tbody>
                         </table>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      <div className="lg:col-span-2 glass-panel p-6 rounded-3xl">
-                        <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-accent"/> Today's Shift</h3>
-                        {todayRec ? (
-                          <div className="flex flex-col gap-4">
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
-                              <div>
-                                <p className="text-sm text-white/50">Checked In At</p>
-                                <p className="text-xl font-bold text-green-400">{fmt(todayRec.checkIn)}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-white/50">Status</p>
-                                <p className="text-xl font-bold text-white">{todayRec.onBreak ? '☕ On Break' : '👨‍💻 Working'}</p>
-                              </div>
-                            </div>
-                            {!todayRec.checkOut && (
-                              <div className="flex gap-4">
-                                <button onClick={todayRec.onBreak ? handleEndBreak : handleStartBreak} className="flex-1 py-3 rounded-xl bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-bold hover:bg-yellow-500/30 transition-all text-sm">
-                                  {todayRec.onBreak ? 'RESUME WORK' : 'START BREAK'}
-                                </button>
-                                <button onClick={handleCheckOut} className="flex-1 py-3 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 font-bold hover:bg-red-500/30 transition-all text-sm flex items-center justify-center gap-2">
-                                  <XCircle className="w-4 h-4" /> CHECK OUT
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="p-8 text-center bg-white/5 rounded-xl border border-white/10">
-                            <p className="text-white/50 mb-4">You haven't checked in yet today.</p>
-                            <button onClick={handleCheckIn} className="px-8 py-3 rounded-full bg-accent text-white font-bold hover:shadow-[0_0_20px_rgba(79,142,247,0.4)] transition-all transform hover:scale-105">
-                              Check In Now
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="glass-panel p-6 rounded-3xl">
-                        <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2"><Bell className="w-5 h-5 text-accent-violet"/> Recent Activity</h3>
-                        <div className="space-y-4">
-                          {announcements.slice(0,3).map(a => (
-                            <div key={a.id} className="pb-4 border-b border-white/10 last:border-0 last:pb-0">
-                              <p className="text-sm font-medium text-white">{a.title}</p>
-                              <p className="text-xs text-white/40 mt-1">{fmtDate(a.postedAt)}</p>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </div>
