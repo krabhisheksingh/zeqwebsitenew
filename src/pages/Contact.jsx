@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, MapPin, Send, ArrowRight } from 'lucide-react';
 import { FaLinkedin, FaTwitter } from 'react-icons/fa';
+import { db } from '../hr/utils/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const teamMembers = [
   {
@@ -131,16 +133,12 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    const formData = new FormData();
-    formData.append("form-name", "contact");
-    Object.keys(formState).forEach((key) => formData.append(key, formState[key]));
 
     try {
-      await fetch("/", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams(formData).toString(),
+      await addDoc(collection(db, "contact_queries"), {
+        ...formState,
+        createdAt: serverTimestamp(),
+        status: "unread"
       });
       
       setIsSubmitting(false);
@@ -148,7 +146,7 @@ export default function Contact() {
       setFormState({ name: '', email: '', subject: '', message: '' });
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
-      console.error(error);
+      console.error("Firebase Error:", error);
       setIsSubmitting(false);
       alert("There was an error sending your message. Please try again.");
     }
@@ -326,11 +324,7 @@ export default function Contact() {
               
               <h3 className="text-2xl font-bold mb-8 relative z-10">Send us a Query</h3>
               
-              <form name="contact" data-netlify="true" netlify-honeypot="bot-field" onSubmit={handleSubmit} className="flex flex-col gap-6 relative z-10">
-                <input type="hidden" name="form-name" value="contact" />
-                <p className="hidden">
-                  <label>Don’t fill this out if you're human: <input name="bot-field" /></label>
-                </p>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
                     <label htmlFor="name" className="text-xs uppercase tracking-widest text-foreground/50 font-semibold">Name</label>

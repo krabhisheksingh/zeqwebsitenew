@@ -6,6 +6,7 @@ import CustomCursor from './components/CustomCursor';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from './components/LoadingScreen';
 import ScrollToTop from './components/ScrollToTop';
+import Chatbot from './components/Chatbot';
 
 import Home from './pages/Home';
 import Services from './pages/Services';
@@ -18,6 +19,7 @@ import Pipeline from './pages/Pipeline';
 import HRLogin from './hr/pages/HRLogin';
 import EmployeeDashboard from './hr/pages/EmployeeDashboard';
 import AdminDashboard from './hr/pages/AdminDashboard';
+import BankDetails from './hr/pages/BankDetails';
 import HRProtected from './hr/components/HRProtected';
 
 function App() {
@@ -48,6 +50,7 @@ function App() {
         <Routes location={location} key={location.pathname}>
           <Route path="/employee-login" element={<HRLogin />} />
           <Route path="/employee-login/dashboard" element={<HRProtected role="employee"><EmployeeDashboard /></HRProtected>} />
+          <Route path="/employee-login/bank-details" element={<HRProtected role="employee"><BankDetails /></HRProtected>} />
           <Route path="/employee-login/admin" element={<HRProtected role="superadmin"><AdminDashboard /></HRProtected>} />
         </Routes>
       )}
@@ -73,6 +76,7 @@ function App() {
                 </Routes>
               </AnimatePresence>
               <Footer />
+              <Chatbot />
             </>
           )}
         </>

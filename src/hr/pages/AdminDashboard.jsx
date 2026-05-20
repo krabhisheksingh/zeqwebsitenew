@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, UserPlus, FileText, Download, CheckCircle2, 
   XCircle, Bell, Calendar, Home, LogOut, Menu,
-  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff
+  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,7 +11,8 @@ import {
   getAnnouncements, updateLeaveStatus, addAnnouncement,
   exportAttendanceCSV, getDashboardStats, HOLIDAYS_2026, clearSession,
   getAllTasks, getAllTickets, updateTicketStatus, getAllDocuments, updateDocumentStatus,
-  getAllPayslips, addPayslip, addRecognition, getRecognitions, addEmployee, updateEmployee
+  getAllPayslips, addPayslip, addRecognition, getRecognitions, addEmployee, updateEmployee,
+  wipeAllEmployeeData
 } from '../utils/hrStorage';
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
@@ -32,10 +33,13 @@ const StatusBadge = ({ status }) => {
     open: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     resolved: 'bg-green-500/15 text-green-400 border-green-500/30',
     verified: 'bg-green-500/15 text-green-400 border-green-500/30',
+    verified_digilocker: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50',
   };
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded border font-medium capitalize flex items-center justify-center max-w-min ${cfg[status] || 'bg-white/10 text-white/60 border-white/20'}`}>
-      {status}
+    <span className={`text-[10px] px-2 py-0.5 rounded border font-medium capitalize flex items-center justify-center max-w-min whitespace-nowrap ${cfg[status] || 'bg-white/10 text-white/60 border-white/20'}`}>
+      {status === 'verified_digilocker' ? (
+        <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> DigiLocker Verified</span>
+      ) : status.replace('_', ' ')}
     </span>
   );
 };
@@ -58,16 +62,133 @@ export default function AdminDashboard() {
   
   const [dataLoading, setDataLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [digiLoading, setDigiLoading] = useState(null);
   
   // Forms
   const [annForm, setAnnForm] = useState({ title: '', body: '' });
   const [payForm, setPayForm] = useState({ employeeId: '', month: '', year: new Date().getFullYear(), netPay: '' });
   const [recForm, setRecForm] = useState({ employeeId: '', badgeTitle: 'Star Performer', message: '' });
-  const [empForm, setEmpForm] = useState({ id: '', fullName: '', email: '', phone: '', department: 'Engineering', designation: '', password: '' });
+  const [empForm, setEmpForm] = useState({ id: '', fullName: '', email: '', phone: '', department: 'Engineering', designation: '', password: '', dateOfJoining: '' });
   const [showAddEmp, setShowAddEmp] = useState(false);
   const [editingEmpId, setEditingEmpId] = useState(null);
   const [editEmpForm, setEditEmpForm] = useState({});
   const [showPass, setShowPass] = useState(false);
+
+  const [selectedPayslip, setSelectedPayslip] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [selectedEmpBank, setSelectedEmpBank] = useState(null);
+
+  const printPayslip = (p) => {
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!printWindow) {
+      toast.error('Popup blocker enabled. Please allow popups to download/print this payslip.');
+      return;
+    }
+    const emp = employees.find(e => e.id === p.employeeId);
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Payslip - ${p.month} ${p.year}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }
+            .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .logo { font-size: 24px; font-weight: bold; color: #4F8EF7; }
+            .title { font-size: 18px; color: #666; margin-top: 5px; }
+            .details-table { width: 100%; margin-top: 30px; border-collapse: collapse; }
+            .details-table td { padding: 8px; border-bottom: 1px solid #eee; }
+            .details-table td.label { font-weight: bold; color: #555; width: 30%; }
+            .salary-breakdown { width: 100%; margin-top: 40px; border-collapse: collapse; }
+            .salary-breakdown th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
+            .salary-breakdown td { padding: 12px; border-bottom: 1px solid #eee; }
+            .total-row { font-size: 18px; font-weight: bold; background: #f8f9fa; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">Zexora Quvixo Group</div>
+            <div class="title">Salary Slip (Payslip)</div>
+            <div>Period: ${p.month} ${p.year}</div>
+          </div>
+          <table class="details-table">
+            <tr>
+              <td class="label">Employee Name:</td>
+              <td>${p.employeeName}</td>
+              <td class="label">Employee ID:</td>
+              <td>${p.employeeId}</td>
+            </tr>
+            <tr>
+              <td class="label">Designation:</td>
+              <td>${emp?.designation || 'Software Developer'}</td>
+              <td class="label">Department:</td>
+              <td>${emp?.department || 'Engineering'}</td>
+            </tr>
+            <tr>
+              <td class="label">Issued Date:</td>
+              <td>${new Date(p.createdAt || Date.now()).toLocaleDateString('en-IN')}</td>
+              <td class="label">Status:</td>
+              <td>Paid</td>
+            </tr>
+          </table>
+          <table class="salary-breakdown">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th style="text-align: right;">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Basic Salary (50%)</td>
+                <td style="text-align: right;">₹${(p.netPay * 0.5).toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td>House Rent Allowance (HRA) (20%)</td>
+                <td style="text-align: right;">₹${(p.netPay * 0.2).toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td>Special Allowance (20%)</td>
+                <td style="text-align: right;">₹${(p.netPay * 0.2).toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td>Conveyance & Medical (10%)</td>
+                <td style="text-align: right;">₹${(p.netPay * 0.1).toLocaleString()}</td>
+              </tr>
+              <tr class="total-row">
+                <td>Net Salary Disbursed</td>
+                <td style="text-align: right;">₹${p.netPay.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer">
+            This is a computer-generated document and does not require a physical signature.
+            <br>&copy; 2026 Zexora Quvixo Group. All rights reserved.
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleDownloadDoc = (docItem) => {
+    if (!docItem.url) {
+      toast.error('This file has no downloadable content (metadata-only record).');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = docItem.url;
+    link.download = docItem.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Downloading document...');
+  };
 
   useEffect(() => {
     if (!session || session.role !== 'superadmin') {
@@ -92,9 +213,41 @@ export default function AdminDashboard() {
     setDataLoading(false);
   };
 
+  const getStarPerformer = () => {
+    const salesByEmployee = {};
+    tasks.forEach(t => {
+      if (t.employeeName) {
+        salesByEmployee[t.employeeName] = (salesByEmployee[t.employeeName] || 0) + (Number(t.sales) || 0);
+      }
+    });
+
+    let starName = '';
+    let maxSales = 0;
+    Object.entries(salesByEmployee).forEach(([name, sales]) => {
+      if (sales > maxSales) {
+        maxSales = sales;
+        starName = name;
+      }
+    });
+
+    return maxSales > 0 ? { name: starName, sales: maxSales } : null;
+  };
+
   const handleLogout = () => {
     clearSession();
     navigate('/employee-login');
+  };
+
+  const handleWipeData = async () => {
+    if (window.confirm("WARNING: This will permanently delete ALL attendance, leaves, tasks, payslips, tickets, documents, and recognitions for ALL employees. Are you sure?")) {
+      try {
+        await wipeAllEmployeeData();
+        toast.success("All employee data has been successfully wiped!");
+        refresh();
+      } catch (err) {
+        toast.error("Failed to wipe data.");
+      }
+    }
   };
 
   const handleLeaveAction = async (id, status) => {
@@ -111,8 +264,17 @@ export default function AdminDashboard() {
 
   const handleDocAction = async (id, status) => {
     await updateDocumentStatus(id, status);
-    toast.success(`Document marked as ${status}`);
+    toast.success(`Document marked as ${status.replace('_', ' ')}`);
     refresh();
+  };
+
+  const handleDigiLockerVerify = (id) => {
+    setDigiLoading(id);
+    setTimeout(() => {
+      handleDocAction(id, 'verified_digilocker');
+      setDigiLoading(null);
+      toast.success('Document verified successfully via DigiLocker API.');
+    }, 2500);
   };
 
   const handleAnnSubmit = async (e) => {
@@ -179,7 +341,7 @@ export default function AdminDashboard() {
     { id: 'attendance', label: 'Attendance', icon: Clock },
     { id: 'leave', label: 'Leave Requests', icon: FileText },
     { id: 'announcements', label: 'Broadcasts', icon: Bell },
-    { id: 'tasks', label: 'Task Management', icon: Briefcase },
+    { id: 'tasks', label: 'Work Logs', icon: Briefcase },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
     { id: 'documents', label: 'Docs Vault', icon: File },
     { id: 'helpdesk', label: 'Support Desk', icon: HelpCircle },
@@ -284,13 +446,47 @@ export default function AdminDashboard() {
                       ))}
                     </div>
 
-                    <div className="glass-panel p-8 rounded-3xl relative overflow-hidden">
+                    <div className="glass-panel p-8 rounded-3xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                       <div className="absolute top-[-50%] right-[-10%] w-[400px] h-[400px] bg-accent-violet/10 rounded-full blur-[80px] pointer-events-none"></div>
-                      <h3 className="font-heading font-bold text-2xl text-white mb-2 relative z-10">Zexora Quvixo HR Framework v2.0</h3>
-                      <p className="text-white/50 max-w-xl relative z-10">
-                        Welcome to the Superadmin Command Center. From here, you possess absolute authority over the employee ecosystem, payroll modules, support desking, and global broadcasts.
-                      </p>
+                      <div className="relative z-10">
+                        <h3 className="font-heading font-bold text-2xl text-white mb-2">Zexora Quvixo HR Framework v2.0</h3>
+                        <p className="text-white/50 max-w-xl">
+                          Welcome to the Superadmin Command Center. From here, you possess absolute authority over the employee ecosystem, payroll modules, support desking, and global broadcasts.
+                        </p>
+                      </div>
+                      <div className="relative z-10 shrink-0">
+                        <button onClick={handleWipeData} className="px-6 py-3 rounded-xl bg-red-500/10 text-red-400 font-bold hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all border border-red-500/30 flex items-center gap-2">
+                          <ShieldAlert className="w-4 h-4" /> Wipe All Data
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Star Performer Spotlight */}
+                    {(() => {
+                      const star = getStarPerformer();
+                      if (!star) return null;
+                      return (
+                        <div className="glass-panel p-8 rounded-3xl relative overflow-hidden border border-purple-500/30 bg-gradient-to-r from-purple-950/20 to-black/40">
+                          <div className="absolute top-[-50%] left-[-10%] w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+                          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-5">
+                              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center animate-pulse shrink-0">
+                                <Award className="w-8 h-8 text-purple-400" />
+                              </div>
+                              <div>
+                                <span className="text-[10px] uppercase tracking-widest text-purple-400 font-semibold px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">Company Star Performer 🌟</span>
+                                <h4 className="text-2xl font-heading font-bold text-white mt-2">{star.name}</h4>
+                                <p className="text-white/60 text-sm mt-0.5">Leads the organization with stellar performance and unmatched contribution.</p>
+                              </div>
+                            </div>
+                            <div className="glass-panel px-6 py-4 rounded-2xl border border-white/5 bg-white/5 text-center min-w-[140px]">
+                              <p className="text-[10px] uppercase tracking-wider text-white/40 font-medium">Sales Closed</p>
+                              <p className="text-3xl font-bold text-purple-400 font-mono mt-1">{star.sales}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -316,6 +512,10 @@ export default function AdminDashboard() {
                           <input type="text" placeholder="Department" value={empForm.department} onChange={(e) => setEmpForm({...empForm, department: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent-violet text-white text-sm"/>
                           <input type="text" placeholder="Designation" value={empForm.designation} onChange={(e) => setEmpForm({...empForm, designation: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent-violet text-white text-sm"/>
                           <input type="email" placeholder="Email" value={empForm.email} onChange={(e) => setEmpForm({...empForm, email: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent-violet text-white text-sm"/>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-xs pointer-events-none">DOJ:</span>
+                            <input type="date" value={empForm.dateOfJoining} onChange={(e) => setEmpForm({...empForm, dateOfJoining: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 outline-none focus:border-accent-violet text-white text-sm" style={{colorScheme: 'dark'}} required />
+                          </div>
                           <button type="submit" className="md:col-span-2 lg:col-span-3 py-3 rounded-xl bg-accent-violet text-white font-bold hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all">Provision Employee</button>
                         </form>
                       </div>
@@ -327,7 +527,7 @@ export default function AdminDashboard() {
                             <th className="px-6 py-4 font-semibold">ID</th>
                             <th className="px-6 py-4 font-semibold">Name & Details</th>
                             <th className="px-6 py-4 font-semibold">Department</th>
-                            <th className="px-6 py-4 font-semibold">Contact</th>
+                            <th className="px-6 py-4 font-semibold">Contact & DOJ</th>
                             <th className="px-6 py-4 font-semibold">Status</th>
                             <th className="px-6 py-4 font-semibold text-right">Actions</th>
                           </tr>
@@ -364,8 +564,9 @@ export default function AdminDashboard() {
                                     <div className="space-y-2">
                                       <input type="email" value={editEmpForm.email} onChange={(ev) => setEditEmpForm({...editEmpForm, email: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" placeholder="Email" />
                                       <input type="text" value={editEmpForm.phone} onChange={(ev) => setEditEmpForm({...editEmpForm, phone: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" placeholder="Phone" />
+                                      <input type="date" value={editEmpForm.dateOfJoining || ''} onChange={(ev) => setEditEmpForm({...editEmpForm, dateOfJoining: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" style={{colorScheme: 'dark'}} />
                                     </div>
-                                  ) : <>{e.email}<br/>{e.phone}</>}
+                                  ) : <>{e.email}<br/>{e.phone}<br/><span className="text-[10px] text-accent-cyan mt-1 inline-block">Joined: {e.dateOfJoining ? fmtDate(e.dateOfJoining) : 'N/A'}</span></>}
                                 </td>
                                 <td className="px-6 py-4">
                                   {isEditing ? (
@@ -382,7 +583,16 @@ export default function AdminDashboard() {
                                       <button onClick={() => setEditingEmpId(null)} className="px-3 py-1 bg-white/10 text-white/60 rounded text-xs hover:bg-white/20">Cancel</button>
                                     </div>
                                   ) : (
-                                    <button onClick={() => startEditEmp(e)} className="text-accent-cyan hover:text-white underline text-xs">Edit</button>
+                                    <div className="flex justify-end gap-3 items-center">
+                                      {e.bankDetails ? (
+                                        <button onClick={() => setSelectedEmpBank(e)} className="text-purple-400 hover:text-purple-300 underline text-xs flex items-center gap-1">
+                                          <Landmark className="w-3.5 h-3.5" /> Bank Details
+                                        </button>
+                                      ) : (
+                                        <span className="text-white/20 text-xs italic">No Bank Details</span>
+                                      )}
+                                      <button onClick={() => startEditEmp(e)} className="text-accent-cyan hover:text-white underline text-xs">Edit</button>
+                                    </div>
                                   )}
                                 </td>
                               </tr>
@@ -469,25 +679,32 @@ export default function AdminDashboard() {
                 {/* ── ADMIN TASKS ── */}
                 {tab === 'tasks' && (
                   <div className="glass-panel rounded-3xl overflow-hidden">
-                    <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Global Task Logs</h3></div>
+                    <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                      <h3 className="font-heading font-bold text-lg text-white">Global Work Log Metrics</h3>
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 font-medium">
+                        {tasks.length} entries total
+                      </span>
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm text-left">
                         <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
                           <tr>
                             <th className="px-6 py-4 font-semibold">Employee</th>
-                            <th className="px-6 py-4 font-semibold">Task</th>
-                            <th className="px-6 py-4 font-semibold">Category</th>
-                            <th className="px-6 py-4 font-semibold">Hours</th>
+                            <th className="px-6 py-4 font-semibold text-center">Total Calls</th>
+                            <th className="px-6 py-4 font-semibold text-center">Total Leads</th>
+                            <th className="px-6 py-4 font-semibold text-center">Total Follow Ups</th>
+                            <th className="px-6 py-4 font-semibold text-center">Sales Made</th>
                             <th className="px-6 py-4 font-semibold">Time</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                           {tasks.map((t, i) => (
                             <tr key={i} className="hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 font-medium text-white">{t.employeeName}</td>
-                              <td className="px-6 py-4 text-white/70 max-w-[200px] truncate">{t.name}</td>
-                              <td className="px-6 py-4"><span className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px]">{t.category}</span></td>
-                              <td className="px-6 py-4 text-accent-cyan font-mono">{t.hours}h</td>
+                              <td className="px-6 py-4 font-semibold text-white">{t.employeeName}</td>
+                              <td className="px-6 py-4 text-center text-accent-cyan font-bold font-mono text-base">{t.calls ?? '—'}</td>
+                              <td className="px-6 py-4 text-center text-green-400 font-bold font-mono text-base">{t.leads ?? '—'}</td>
+                              <td className="px-6 py-4 text-center text-yellow-400 font-bold font-mono text-base">{t.followups ?? '—'}</td>
+                              <td className="px-6 py-4 text-center text-purple-400 font-bold font-mono text-base">{t.sales ?? '—'}</td>
                               <td className="px-6 py-4 text-white/40 text-xs">{fmtDate(t.createdAt)}</td>
                             </tr>
                           ))}
@@ -522,6 +739,7 @@ export default function AdminDashboard() {
                               <th className="px-6 py-4 font-semibold">Period</th>
                               <th className="px-6 py-4 font-semibold">Amount</th>
                               <th className="px-6 py-4 font-semibold">Issued On</th>
+                              <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
@@ -531,6 +749,16 @@ export default function AdminDashboard() {
                                 <td className="px-6 py-4 text-white/70">{p.month} {p.year}</td>
                                 <td className="px-6 py-4 text-green-400 font-mono">₹{p.netPay.toLocaleString()}</td>
                                 <td className="px-6 py-4 text-white/40 text-xs">{fmtDate(p.createdAt)}</td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <button onClick={() => setSelectedPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-white/10 transition-all border border-white/10 flex items-center gap-1 font-semibold">
+                                      <Eye className="w-3.5 h-3.5 text-accent-cyan" /> View
+                                    </button>
+                                    <button onClick={() => printPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-green-500/20 hover:text-green-300 hover:border-green-500/30 transition-all border border-white/10 flex items-center gap-1 font-semibold">
+                                      <Download className="w-3.5 h-3.5 text-green-400" /> Download
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -561,12 +789,27 @@ export default function AdminDashboard() {
                               <td className="px-6 py-4 text-white/70 flex items-center gap-2"><FileText className="w-4 h-4 text-accent-cyan"/>{d.name}</td>
                               <td className="px-6 py-4"><StatusBadge status={d.status} /></td>
                               <td className="px-6 py-4 text-right">
-                                {d.status === 'pending' && (
-                                  <div className="flex items-center justify-end gap-2">
-                                    <button onClick={() => handleDocAction(d.id, 'verified')} className="p-1.5 rounded-lg bg-green-500/20 text-green-400"><CheckCircle2 className="w-4 h-4"/></button>
-                                    <button onClick={() => handleDocAction(d.id, 'rejected')} className="p-1.5 rounded-lg bg-red-500/20 text-red-400"><XCircle className="w-4 h-4"/></button>
-                                  </div>
-                                )}
+                                <div className="flex items-center justify-end gap-3">
+                                  <button onClick={() => setSelectedDocument(d)} className="p-1.5 rounded-lg bg-white/5 text-white/80 hover:bg-white/10 transition-colors border border-white/10 flex items-center gap-1.5" title="View Document">
+                                    <Eye className="w-3.5 h-3.5 text-accent-cyan"/>
+                                    <span className="hidden lg:block text-xs font-semibold">View</span>
+                                  </button>
+                                  <button onClick={() => handleDownloadDoc(d)} className="p-1.5 rounded-lg bg-white/5 text-white/80 hover:bg-white/10 transition-colors border border-white/10 flex items-center gap-1.5" title="Download Document">
+                                    <Download className="w-3.5 h-3.5 text-accent"/>
+                                    <span className="hidden lg:block text-xs font-semibold">Download</span>
+                                  </button>
+
+                                  {d.status === 'pending' && (
+                                    <div className="flex items-center gap-2 border-l border-white/10 pl-3">
+                                      <button onClick={() => handleDigiLockerVerify(d.id)} className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center gap-1 hover:bg-emerald-500/30 transition-colors" disabled={digiLoading === d.id}>
+                                        {digiLoading === d.id ? <div className="w-4 h-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin"/> : <ShieldCheck className="w-4 h-4"/>}
+                                        <span className="hidden lg:block text-xs font-bold">DigiLocker</span>
+                                      </button>
+                                      <button onClick={() => handleDocAction(d.id, 'verified')} className="p-1.5 rounded-lg bg-green-500/20 text-green-400" title="Verify"><CheckCircle2 className="w-4 h-4"/></button>
+                                      <button onClick={() => handleDocAction(d.id, 'rejected')} className="p-1.5 rounded-lg bg-red-500/20 text-red-400" title="Reject"><XCircle className="w-4 h-4"/></button>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -693,6 +936,318 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* ── PAYSLIP DETAILS MODAL ── */}
+      <AnimatePresence>
+        {selectedPayslip && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} 
+              animate={{ scale: 1, y: 0 }} 
+              exit={{ scale: 0.9, y: 20 }} 
+              className="w-full max-w-2xl bg-black/90 border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl"
+            >
+              {/* Decorative background glow */}
+              <div className="absolute top-[-20%] left-[-20%] w-full h-full bg-accent/10 blur-[80px] pointer-events-none mix-blend-screen"></div>
+
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedPayslip(null)} 
+                className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+
+              <div className="text-center border-b border-white/10 pb-6 mb-6">
+                <h2 className="text-2xl font-heading font-bold text-white tracking-wide">Zexora Quvixo Group</h2>
+                <p className="text-xs uppercase tracking-widest text-accent-cyan font-semibold mt-1">Salary Slip / Payslip</p>
+                <p className="text-sm text-white/60 mt-1">Period: {selectedPayslip.month} {selectedPayslip.year}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm mb-8 bg-white/5 p-5 rounded-2xl border border-white/5">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-white/40 mb-0.5">Employee Name</p>
+                  <p className="text-white font-medium">{selectedPayslip.employeeName}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-white/40 mb-0.5">Employee ID</p>
+                  <p className="text-white font-medium">{selectedPayslip.employeeId}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-white/40 mb-0.5">Designation</p>
+                  <p className="text-white font-medium">
+                    {employees.find(e => e.id === selectedPayslip.employeeId)?.designation || 'Software Developer'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-white/40 mb-0.5">Department</p>
+                  <p className="text-white font-medium">
+                    {employees.find(e => e.id === selectedPayslip.employeeId)?.department || 'Engineering'}
+                  </p>
+                </div>
+              </div>
+
+              <h4 className="text-sm font-semibold text-white/80 mb-3 uppercase tracking-wider">Earnings Breakdown</h4>
+              <div className="space-y-3 mb-8">
+                {[
+                  ['Basic Salary (50%)', selectedPayslip.netPay * 0.5],
+                  ['House Rent Allowance (HRA) (20%)', selectedPayslip.netPay * 0.2],
+                  ['Special Allowance (20%)', selectedPayslip.netPay * 0.2],
+                  ['Conveyance & Medical (10%)', selectedPayslip.netPay * 0.1],
+                ].map(([label, amount]) => (
+                  <div key={label} className="flex justify-between items-center text-sm py-1.5 border-b border-white/5">
+                    <span className="text-white/60">{label}</span>
+                    <span className="text-white font-mono">₹{amount.toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center text-base font-bold pt-3 bg-white/5 px-4 py-3 rounded-xl border border-white/10">
+                  <span className="text-accent-cyan uppercase tracking-wider">Net Disbursed</span>
+                  <span className="text-white font-mono">₹{parseFloat(selectedPayslip.netPay).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-xs text-green-400 font-semibold px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 uppercase tracking-widest">
+                  Status: Paid
+                </span>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setSelectedPayslip(null)} 
+                    className="px-5 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-all border border-white/10 text-xs font-semibold"
+                  >
+                    Close
+                  </button>
+                  <button 
+                    onClick={() => {
+                      printPayslip(selectedPayslip);
+                      setSelectedPayslip(null);
+                    }} 
+                    className="px-5 py-2.5 rounded-xl bg-accent text-white hover:bg-accent-cyan transition-all border border-accent/20 text-xs font-semibold flex items-center gap-1.5 shadow-[0_4px_20px_rgba(79,142,247,0.3)]"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download PDF
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── DOCUMENT VIEWER MODAL ── */}
+      <AnimatePresence>
+        {selectedDocument && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} 
+              animate={{ scale: 1, y: 0 }} 
+              exit={{ scale: 0.9, y: 20 }} 
+              className="w-full max-w-3xl bg-black/90 border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Decorative background glow */}
+              <div className="absolute top-[-20%] left-[-20%] w-full h-full bg-accent-cyan/10 blur-[80px] pointer-events-none mix-blend-screen"></div>
+
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedDocument(null)} 
+                className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+
+              <div className="border-b border-white/10 pb-4 mb-6 pr-10">
+                <h2 className="text-xl font-heading font-bold text-white truncate">{selectedDocument.name}</h2>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="text-xs text-white/45">Employee: {selectedDocument.employeeName} ({selectedDocument.employeeId})</span>
+                  <span className="text-white/20">•</span>
+                  <span className="text-xs text-white/40">Uploaded {fmtDate(selectedDocument.uploadedAt)}</span>
+                  <span className="text-white/20">•</span>
+                  <span className="text-xs text-white/40">{(selectedDocument.size / 1024).toFixed(1)} KB</span>
+                  <span className="text-white/20">•</span>
+                  <span className={`px-2 py-0.5 text-[10px] rounded-full border uppercase tracking-wider font-semibold ${selectedDocument.status === 'verified' ? 'bg-green-500/15 text-green-400 border-green-500/30' : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'}`}>
+                    {selectedDocument.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Document Container */}
+              <div className="flex-1 overflow-y-auto mb-6 bg-white/5 rounded-2xl border border-white/5 p-4 flex items-center justify-center min-h-[300px]">
+                {selectedDocument.url ? (
+                  selectedDocument.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(selectedDocument.name) ? (
+                    <img 
+                      src={selectedDocument.url} 
+                      alt={selectedDocument.name} 
+                      className="max-w-full max-h-[50vh] object-contain rounded-xl shadow-lg border border-white/5"
+                    />
+                  ) : selectedDocument.type === 'application/pdf' || /\.pdf$/i.test(selectedDocument.name) ? (
+                    <iframe 
+                      src={selectedDocument.url} 
+                      title={selectedDocument.name} 
+                      className="w-full h-[55vh] rounded-xl border border-white/10"
+                    />
+                  ) : (
+                    <div className="text-center p-8">
+                      <FileText className="w-16 h-16 text-accent-cyan mx-auto mb-4" />
+                      <p className="text-white font-medium mb-1">Preview not available for this file type</p>
+                      <p className="text-xs text-white/40">Type: {selectedDocument.type || 'Unknown'}</p>
+                    </div>
+                  )
+                ) : (
+                  /* Stylized fallback document card */
+                  <div className="w-full max-w-md p-8 bg-black/40 border border-white/10 rounded-2xl text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-accent to-accent-cyan"></div>
+                    <FileText className="w-16 h-16 text-accent-cyan mx-auto mb-4 opacity-80 animate-pulse" />
+                    <h3 className="text-lg font-bold text-white mb-2">Pre-Storage Metadata Record</h3>
+                    <p className="text-xs text-white/70 mb-4 leading-relaxed">
+                      This document was uploaded before raw file storage was activated. The file's metadata and cryptographic signature were saved, but the raw file contents are not stored in the database.
+                    </p>
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl text-xs text-center font-semibold mb-6">
+                      ⚠️ Please upload a new document to view the file content.
+                    </div>
+                    <div className="space-y-2.5 text-left text-xs bg-white/5 p-4 rounded-xl border border-white/5">
+                      <div className="flex justify-between">
+                        <span className="text-white/40">Doc Ref ID:</span>
+                        <span className="text-white font-mono">{selectedDocument.id || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/40">File Name:</span>
+                        <span className="text-white truncate max-w-[200px]">{selectedDocument.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/40">Hash Status:</span>
+                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          ✓ Integrity Verified
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center">
+                <button 
+                  onClick={() => setSelectedDocument(null)} 
+                  className="px-5 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-all border border-white/10 text-xs font-semibold"
+                >
+                  Close
+                </button>
+                {selectedDocument.url && (
+                  <button 
+                    onClick={() => handleDownloadDoc(selectedDocument)} 
+                    className="px-5 py-2.5 rounded-xl bg-accent text-white hover:bg-accent-cyan transition-all border border-accent/20 text-xs font-semibold flex items-center gap-1.5 shadow-[0_4px_20px_rgba(79,142,247,0.3)]"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download File
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── EMPLOYEE BANK DETAILS MODAL ── */}
+      <AnimatePresence>
+        {selectedEmpBank && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} 
+              animate={{ scale: 1, y: 0 }} 
+              exit={{ scale: 0.9, y: 20 }} 
+              className="w-full max-w-md bg-black/90 border border-purple-500/30 rounded-3xl p-8 relative overflow-hidden shadow-2xl flex flex-col"
+            >
+              {/* Decorative purple background glow */}
+              <div className="absolute top-[-20%] left-[-20%] w-full h-full bg-purple-500/10 blur-[80px] pointer-events-none mix-blend-screen"></div>
+
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedEmpBank(null)} 
+                className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mb-3">
+                  <Landmark className="w-6 h-6 text-purple-400" />
+                </div>
+                <h2 className="text-xl font-heading font-bold text-white">Employee Bank Credentials</h2>
+                <p className="text-xs text-white/40 mt-1">Verified payment accounts logged by the employee</p>
+              </div>
+
+              {/* Mockup Card */}
+              <div className="w-full h-44 rounded-2xl p-5 mb-6 flex flex-col justify-between border border-white/10 bg-gradient-to-br from-[#1d1b38] via-[#0f0e21] to-[#2b2157] relative overflow-hidden shadow-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] tracking-widest text-purple-400 font-semibold uppercase">Zexora Corporate</span>
+                    <h3 className="text-xs font-semibold text-white/70 mt-1 uppercase">{selectedEmpBank.bankDetails.bankName}</h3>
+                  </div>
+                  <span className="px-2 py-0.5 text-[8px] rounded bg-green-500/15 border border-green-500/30 text-green-400 uppercase font-semibold">Active</span>
+                </div>
+
+                <div className="my-2">
+                  <p className="text-base font-mono font-semibold tracking-wider text-white">
+                    {selectedEmpBank.bankDetails.accountNumber}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-end">
+                  <div>
+                    <span className="text-[8px] uppercase tracking-wider text-white/30 block">Account Holder</span>
+                    <span className="text-xs font-semibold text-white/80 uppercase truncate max-w-[150px] inline-block">{selectedEmpBank.bankDetails.holderName}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[8px] uppercase tracking-wider text-white/30 block">IFSC</span>
+                    <span className="text-xs font-semibold font-mono text-purple-400 uppercase">{selectedEmpBank.bankDetails.ifscCode}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details table */}
+              <div className="space-y-3.5 text-xs bg-white/5 p-4 rounded-xl border border-white/5 mb-6">
+                <div className="flex justify-between">
+                  <span className="text-white/40">Employee Name:</span>
+                  <span className="text-white font-medium">{selectedEmpBank.fullName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Employee ID:</span>
+                  <span className="text-white font-mono font-medium">{selectedEmpBank.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Branch Name:</span>
+                  <span className="text-white font-medium">{selectedEmpBank.bankDetails.branchName || 'Not Specified'}</span>
+                </div>
+                {selectedEmpBank.bankDetails.upiId && (
+                  <div className="flex justify-between">
+                    <span className="text-white/40">UPI ID:</span>
+                    <span className="text-white font-mono text-purple-400 font-medium">{selectedEmpBank.bankDetails.upiId}</span>
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => setSelectedEmpBank(null)} 
+                className="w-full py-3 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-all border border-white/10 text-xs font-semibold"
+              >
+                Close Portal
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -27,3 +27,8 @@ dist-ssr
 antigravity_instructions.txt
 
 .vercel
+
+# Local environment and test files
+.env
+list-models.cjs
+test-gemini.js

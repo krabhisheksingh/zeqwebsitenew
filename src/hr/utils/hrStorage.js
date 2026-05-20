@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import {
-  collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, query, where,
+  collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, query, where, deleteDoc
 } from 'firebase/firestore';
 
 // ── Session ────────────────────────────────────────────────────────────────────
@@ -19,6 +19,7 @@ export const seedInitialData = async () => {
       designation: 'Software Developer', email: 'demo@zexoraquvixo.in',
       phone: '9876543210', username: 'demo', password: 'demo123',
       role: 'employee', status: 'active', createdAt: new Date().toISOString(),
+      dateOfJoining: '2023-01-15'
     });
   }
   const annSnap = await getDocs(collection(db, 'announcements'));
@@ -37,9 +38,15 @@ export const getEmployees = async () => {
   return snap.docs.map((d) => ({ ...d.data() }));
 };
 
+export const getEmployee = async (id) => {
+  const snap = await getDoc(doc(db, 'employees', id));
+  return snap.exists() ? snap.data() : null;
+};
+
 export const addEmployee = async (emp) => {
   await setDoc(doc(db, 'employees', emp.id), {
     ...emp, role: 'employee', status: 'active', createdAt: new Date().toISOString(),
+    dateOfJoining: emp.dateOfJoining || new Date().toISOString().split('T')[0]
   });
 };
 
@@ -62,6 +69,13 @@ export const findEmployee = async (identifier, password) => {
   if (emp.password !== password) return { result: null, reason: 'wrong_password' };
   if (emp.status !== 'active') return { result: null, reason: 'inactive' };
   return { result: emp, reason: null };
+};
+
+export const findEmployeeByEmail = async (email) => {
+  const q = query(collection(db, 'employees'), where('email', '==', email));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return snap.docs[0].data();
 };
 
 
@@ -202,6 +216,17 @@ export const getDashboardStats = async () => {
   };
 };
 
+// ── Wipe Data ─────────────────────────────────────────────────────────────────
+export const wipeAllEmployeeData = async () => {
+  const collectionsToWipe = ['attendance', 'leaves', 'tasks', 'payslips', 'documents', 'tickets', 'recognitions'];
+  
+  for (const collName of collectionsToWipe) {
+    const snap = await getDocs(collection(db, collName));
+    const deletePromises = snap.docs.map(d => deleteDoc(doc(db, collName, d.id)));
+    await Promise.all(deletePromises);
+  }
+};
+
 // ── Holidays ──────────────────────────────────────────────────────────────────
 export const HOLIDAYS_2026 = [
   { name: 'New Year', date: '01-01-2026', day: 'Thursday' },
@@ -252,6 +277,10 @@ export const getEmployeeDocuments = async (employeeId) => {
   const q = query(collection(db, 'documents'), where('employeeId', '==', employeeId));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+};
+
+export const addDocument = async (document) => {
+  await addDoc(collection(db, 'documents'), { ...document, status: 'pending', uploadedAt: new Date().toISOString() });
 };
 
 export const getEmployeeTickets = async (employeeId) => {
