@@ -202,6 +202,10 @@ export const addAnnouncement = async (ann) => {
   await addDoc(collection(db, 'announcements'), { ...ann, postedAt: new Date().toISOString(), postedBy: 'superadmin' });
 };
 
+export const deleteAnnouncement = async (id) => {
+  await deleteDoc(doc(db, 'announcements', id));
+};
+
 // ── Dashboard Stats ───────────────────────────────────────────────────────────
 export const getDashboardStats = async () => {
   const today = new Date().toISOString().split('T')[0];

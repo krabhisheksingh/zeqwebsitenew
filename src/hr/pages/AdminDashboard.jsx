@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, UserPlus, FileText, Download, CheckCircle2, 
   XCircle, Bell, Calendar, Home, LogOut, Menu,
-  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark
+  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +12,7 @@ import {
   exportAttendanceCSV, getDashboardStats, HOLIDAYS_2026, clearSession,
   getAllTasks, getAllTickets, updateTicketStatus, getAllDocuments, updateDocumentStatus,
   getAllPayslips, addPayslip, addRecognition, getRecognitions, addEmployee, updateEmployee,
-  wipeAllEmployeeData, deleteEmployee
+  wipeAllEmployeeData, deleteEmployee, deleteAnnouncement
 } from '../utils/hrStorage';
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
@@ -294,6 +294,18 @@ export default function AdminDashboard() {
     setAnnForm({ title: '', body: '' });
     toast.success('Announcement posted');
     refresh();
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (window.confirm('Are you sure you want to permanently delete this announcement?')) {
+      try {
+        await deleteAnnouncement(id);
+        toast.success('Announcement deleted');
+        refresh();
+      } catch (err) {
+        toast.error('Failed to delete announcement');
+      }
+    }
   };
 
   const handlePaySubmit = async (e) => {
@@ -946,10 +958,22 @@ export default function AdminDashboard() {
                     </div>
                     <div className="lg:col-span-2 space-y-4">
                       {announcements.map((a) => (
-                        <div key={a.id} className="glass-panel p-6 rounded-2xl relative overflow-hidden">
+                        <div key={a.id} className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
                           <div className="absolute top-0 right-0 w-32 h-32 bg-accent-violet/10 rounded-full blur-[40px] pointer-events-none"></div>
-                          <div className="flex items-start justify-between gap-4 mb-2 relative z-10"><h4 className="font-bold text-lg text-white">{a.title}</h4><span className="text-xs font-mono text-accent-cyan px-2 py-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 shrink-0">{fmtDate(a.postedAt)}</span></div>
-                          <p className="text-white/60 text-sm relative z-10">{a.body}</p>
+                          <div className="flex items-start justify-between gap-4 mb-2 relative z-10">
+                            <h4 className="font-bold text-lg text-white">{a.title}</h4>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-mono text-accent-cyan px-2 py-1 rounded bg-accent-cyan/10 border border-accent-cyan/20">{fmtDate(a.postedAt)}</span>
+                              <button 
+                                onClick={() => handleDeleteAnnouncement(a.id)}
+                                className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                title="Delete Announcement"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-white/60 text-sm relative z-10 pr-8">{a.body}</p>
                         </div>
                       ))}
                     </div>
