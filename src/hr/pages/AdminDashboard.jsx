@@ -194,6 +194,205 @@ export default function AdminDashboard() {
     printWindow.document.close();
   };
 
+  const handleExportEmployeesPDF = () => {
+    const printWindow = window.open('', '_blank', 'width=1000,height=900');
+    if (!printWindow) {
+      toast.error('Popup blocker enabled. Please allow popups to export the PDF.');
+      return;
+    }
+
+    const rows = employees.map(e => `
+      <tr>
+        <td><span class="emp-id">${e.id}</span></td>
+        <td>
+          <div class="emp-name">${e.fullName}</div>
+          <div class="emp-designation">${e.designation || 'Software Developer'}</div>
+        </td>
+        <td>${e.department || 'Engineering'}</td>
+        <td>
+          <div>${e.email || '—'}</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${e.phone || '—'}</div>
+        </td>
+        <td>${fmtDate(e.dateOfJoining)}</td>
+        <td style="text-transform: capitalize;">${e.role || 'employee'}</td>
+        <td>
+          <span class="status-badge ${e.status === 'active' ? 'status-active' : 'status-inactive'}">
+            ${e.status || 'active'}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Workforce Directory - Zexora Quvixo Group</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              padding: 40px;
+              color: #1e293b;
+              background-color: #ffffff;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .logo {
+              font-size: 24px;
+              font-weight: 800;
+              color: #0f172a;
+              letter-spacing: -0.025em;
+            }
+            .logo span {
+              color: #8b5cf6;
+            }
+            .title-section {
+              text-align: right;
+            }
+            .title {
+              font-size: 18px;
+              font-weight: 700;
+              color: #0f172a;
+              margin: 0;
+            }
+            .subtitle {
+              font-size: 11px;
+              color: #64748b;
+              margin-top: 4px;
+              font-family: monospace;
+            }
+            .directory-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            .directory-table th {
+              background-color: #f8fafc;
+              color: #475569;
+              font-size: 10px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              padding: 12px 16px;
+              border-bottom: 2px solid #e2e8f0;
+              text-align: left;
+            }
+            .directory-table td {
+              padding: 14px 16px;
+              border-bottom: 1px solid #f1f5f9;
+              font-size: 12px;
+              color: #334155;
+            }
+            .emp-id {
+              font-family: monospace;
+              font-weight: 600;
+              color: #0f172a;
+              background-color: #f1f5f9;
+              padding: 2px 6px;
+              border-radius: 4px;
+            }
+            .emp-name {
+              font-weight: 600;
+              color: #0f172a;
+            }
+            .emp-designation {
+              font-size: 10px;
+              color: #64748b;
+              margin-top: 2px;
+            }
+            .status-badge {
+              font-size: 9px;
+              font-weight: 700;
+              text-transform: uppercase;
+              padding: 2px 8px;
+              border-radius: 9999px;
+              display: inline-block;
+            }
+            .status-active {
+              background-color: #dcfce7;
+              color: #15803d;
+            }
+            .status-inactive {
+              background-color: #fee2e2;
+              color: #b91c1c;
+            }
+            .security-note {
+              margin-top: 20px;
+              font-size: 11px;
+              color: #b45309;
+              background-color: #fef3c7;
+              border: 1px solid #fcd34d;
+              padding: 10px 16px;
+              border-radius: 8px;
+              font-weight: 500;
+            }
+            .footer {
+              margin-top: 50px;
+              text-align: center;
+              font-size: 10px;
+              color: #94a3b8;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 20px;
+            }
+            @media print {
+              body {
+                padding: 20px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">Zexora Quvixo<span>Group</span></div>
+            <div class="title-section">
+              <div class="title">Workforce Directory Report</div>
+              <div class="subtitle">Generated: ${new Date().toLocaleString('en-IN')}</div>
+            </div>
+          </div>
+          
+          <table class="directory-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Contact</th>
+                <th>DOJ</th>
+                <th>Role</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+
+          <div class="security-note">
+            ⚠️ Security Notice: Password hashes and credentials are excluded from this directory export for security compliance.
+          </div>
+
+          <div class="footer">
+            Confidential Document &bull; For Internal HR Use Only &bull; &copy; 2026 Zexora Quvixo Group.
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    toast.success('Generating Workforce PDF...');
+  };
+
   const handleDownloadDoc = (docItem) => {
     if (!docItem.url) {
       toast.error('This file has no downloadable content (metadata-only record).');
@@ -866,11 +1065,16 @@ export default function AdminDashboard() {
                   <div className="glass-panel rounded-3xl overflow-hidden">
                     <div className="p-6 border-b border-white/10 flex justify-between items-center">
                       <h3 className="font-heading font-bold text-lg">Workforce Directory</h3>
-                      {hasPermission('manage_employees') && (
-                        <button onClick={() => setShowAddEmp(!showAddEmp)} className="px-5 py-2 rounded-xl bg-accent-violet/20 text-accent-violet font-semibold text-sm hover:bg-accent-violet/30 transition-all border border-accent-violet/30 flex items-center gap-2">
-                          {showAddEmp ? <XCircle className="w-4 h-4"/> : <UserPlus className="w-4 h-4"/>} {showAddEmp ? 'Close Form' : 'Add Employee'}
+                      <div className="flex items-center gap-3">
+                        <button onClick={handleExportEmployeesPDF} className="px-5 py-2 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-all border border-white/20 flex items-center gap-2">
+                          <Download className="w-4 h-4" /> Export PDF
                         </button>
-                      )}
+                        {hasPermission('manage_employees') && (
+                          <button onClick={() => setShowAddEmp(!showAddEmp)} className="px-5 py-2 rounded-xl bg-accent-violet/20 text-accent-violet font-semibold text-sm hover:bg-accent-violet/30 transition-all border border-accent-violet/30 flex items-center gap-2">
+                            {showAddEmp ? <XCircle className="w-4 h-4"/> : <UserPlus className="w-4 h-4"/>} {showAddEmp ? 'Close Form' : 'Add Employee'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {showAddEmp && hasPermission('manage_employees') && (
                       <div className="p-6 border-b border-white/10 bg-black/20">
