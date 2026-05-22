@@ -6,7 +6,6 @@ import CustomCursor from './components/CustomCursor';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from './components/LoadingScreen';
 import ScrollToTop from './components/ScrollToTop';
-import Chatbot from './components/Chatbot';
 
 import Home from './pages/Home';
 import Services from './pages/Services';
@@ -76,7 +75,6 @@ function App() {
                 </Routes>
               </AnimatePresence>
               <Footer />
-              <Chatbot />
             </>
           )}
         </>
