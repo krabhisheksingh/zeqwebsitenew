@@ -600,7 +600,7 @@ export default function AdminDashboard() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-accent-violet to-accent-cyan flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)]">
             <ShieldAlert className="w-5 h-5 text-white" />
           </div>
-          <h2 className="font-heading font-bold text-lg tracking-wide text-white">{session.role === 'superadmin' ? 'Superadmin' : 'Admin'}</h2>
+          <h2 className="font-heading font-bold text-lg tracking-wide text-white">{session.role === 'superadmin' ? 'Superadmin' : 'Admin Center'}</h2>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1 scrollbar-hide">
