@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, UserPlus, FileText, Download, CheckCircle2, 
   XCircle, Bell, Calendar, Home, LogOut, Menu,
-  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark, Trash2, Lock, Trophy
+  Briefcase, DollarSign, File, HelpCircle, Award, ShieldAlert, Clock, Plus, Eye, EyeOff, ShieldCheck, Landmark, Trash2, Lock, Trophy, UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +12,8 @@ import {
   exportAttendanceCSV, getDashboardStats, HOLIDAYS_2026, clearSession,
   getAllTasks, getAllTickets, updateTicketStatus, getAllDocuments, updateDocumentStatus,
   getAllPayslips, addPayslip, addRecognition, getRecognitions, addEmployee, updateEmployee,
-  wipeAllEmployeeData, deleteEmployee, deleteAnnouncement
+  wipeAllEmployeeData, deleteEmployee, deleteAnnouncement,
+  checkIn, checkOut, startBreak, endBreak, getTodayRecord, applyLeave
 } from '../utils/hrStorage';
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
@@ -90,6 +91,10 @@ export default function AdminDashboard() {
   const [detailsTab, setDetailsTab] = useState('profile');
   const [selectedRole, setSelectedRole] = useState('employee');
   const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [todayRec, setTodayRec] = useState(null);
+  const [personalAttendance, setPersonalAttendance] = useState([]);
+  const [personalLeaves, setPersonalLeaves] = useState([]);
+  const [leaveForm, setLeaveForm] = useState({ type: 'sick', fromDate: '', toDate: '', reason: '' });
 
   const printPayslip = (p) => {
     const printWindow = window.open('', '_blank', 'width=800,height=900');
@@ -228,6 +233,13 @@ export default function AdminDashboard() {
       ]);
       setStats(st); setEmployees(emps); setAttendance(att); setLeaves(lvs); setAnnouncements(anns);
       setTasks(tks); setTickets(tkts); setDocuments(docs); setPayslips(pays); setRecognitions(recs);
+
+      if (session?.employeeId) {
+        const today = await getTodayRecord(session.employeeId);
+        setTodayRec(today);
+        setPersonalAttendance(att.filter(r => r.employeeId === session.employeeId));
+        setPersonalLeaves(lvs.filter(l => l.employeeId === session.employeeId));
+      }
     } catch (err) {
       toast.error('Failed to load admin data');
     }
@@ -428,6 +440,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCheckIn = async () => {
+    if (!session?.employeeId || todayRec) return;
+    const success = await checkIn(session.employeeId, session.name);
+    if (success) {
+      toast.success(`Checked in at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+      refresh();
+    } else {
+      toast.error('Already checked in today.');
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!session?.employeeId || !todayRec || todayRec.checkOut) return;
+    await checkOut(session.employeeId);
+    toast.success(`Checked out at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    refresh();
+  };
+
+  const handleStartBreak = async () => {
+    if (!session?.employeeId || !todayRec || todayRec.checkOut || todayRec.onBreak) return;
+    await startBreak(session.employeeId);
+    toast('Break started ☕');
+    refresh();
+  };
+
+  const handleEndBreak = async () => {
+    if (!session?.employeeId || !todayRec || !todayRec.onBreak) return;
+    await endBreak(session.employeeId);
+    toast.success('Break ended, back to work!');
+    refresh();
+  };
+
+  const handleLeaveSubmit = async (e) => {
+    e.preventDefault();
+    if (!session?.employeeId) return;
+    if (!leaveForm.fromDate || !leaveForm.toDate || !leaveForm.reason) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    try {
+      await applyLeave({
+        ...leaveForm,
+        employeeId: session.employeeId,
+        employeeName: session.name,
+      });
+      setLeaveForm({ type: 'sick', fromDate: '', toDate: '', reason: '' });
+      toast.success('Leave request submitted!');
+      refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to submit leave.');
+    }
+  };
+
   const startEditEmp = (emp) => {
     setEditingEmpId(emp.id);
     setEditEmpForm(emp);
@@ -480,6 +546,7 @@ export default function AdminDashboard() {
 
   const NAV_ITEMS = [
     { id: 'overview', label: 'Command Center', icon: Home },
+    { id: 'my-portal', label: 'My Shift & Leave', icon: UserCheck },
     { id: 'employees', label: 'Employees', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: Clock },
     { id: 'leave', label: 'Leave Requests', icon: FileText },
@@ -494,6 +561,7 @@ export default function AdminDashboard() {
 
   const filteredNavItems = NAV_ITEMS.filter(item => {
     if (item.id === 'overview' || item.id === 'holidays') return true;
+    if (item.id === 'my-portal') return !!session?.employeeId;
     if (item.id === 'employees') return hasPermission('view_employees') || hasPermission('manage_employees');
     if (item.id === 'attendance') return hasPermission('manage_attendance');
     if (item.id === 'leave') return hasPermission('manage_leaves');
@@ -652,6 +720,57 @@ export default function AdminDashboard() {
                         </div>
                       );
                     })()}
+
+                    {/* Personal Shift Logging Widget */}
+                    {session?.employeeId && (
+                      <div className="glass-panel p-6 rounded-3xl relative overflow-hidden bg-gradient-to-r from-accent/10 to-accent-violet/10 border-t border-t-white/10">
+                        <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] bg-accent/5 rounded-full blur-[60px] pointer-events-none"></div>
+                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center shrink-0">
+                              <Clock className="w-6 h-6 text-accent" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase tracking-widest text-accent font-semibold px-3 py-1 rounded-full bg-accent/10 border border-accent/20">Shift Control Center</span>
+                              <h4 className="text-xl font-heading font-bold text-white mt-2">
+                                {!todayRec && 'Shift Not Started'}
+                                {todayRec && !todayRec.checkOut && !todayRec.onBreak && 'On Shift • Active'}
+                                {todayRec && !todayRec.checkOut && todayRec.onBreak && 'On Break • Paused'}
+                                {todayRec?.checkOut && 'Shift Completed'}
+                              </h4>
+                              <p className="text-white/60 text-xs mt-1">
+                                {!todayRec && 'You have not checked in for today yet.'}
+                                {todayRec && !todayRec.checkOut && !todayRec.onBreak && `Checked in at ${fmtTime(todayRec.checkIn)}.`}
+                                {todayRec && !todayRec.checkOut && todayRec.onBreak && `Checked in at ${fmtTime(todayRec.checkIn)} (On Break).`}
+                                {todayRec?.checkOut && `Checked in at ${fmtTime(todayRec.checkIn)} | Checked out at ${fmtTime(todayRec.checkOut)} (Worked ${todayRec.totalHours || 0} hrs).`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                            {!todayRec && (
+                              <button onClick={handleCheckIn} className="w-full md:w-auto px-6 py-3 rounded-xl bg-green-500/20 text-green-400 border border-green-500/30 font-bold hover:bg-green-500/30 transition-all flex items-center justify-center gap-2">
+                                <CheckCircle2 className="w-4 h-4"/> Check In
+                              </button>
+                            )}
+                            {todayRec && !todayRec.checkOut && (
+                              <>
+                                <button onClick={todayRec.onBreak ? handleEndBreak : handleStartBreak} className="w-full md:w-auto px-5 py-3 rounded-xl bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-bold hover:bg-yellow-500/30 transition-all flex items-center justify-center gap-2">
+                                  {todayRec.onBreak ? 'Resume Work' : 'Start Break'}
+                                </button>
+                                <button onClick={handleCheckOut} className="w-full md:w-auto px-6 py-3 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 font-bold hover:bg-red-500/30 transition-all flex items-center justify-center gap-2">
+                                  <XCircle className="w-4 h-4"/> Check Out
+                                </button>
+                              </>
+                            )}
+                            {todayRec?.checkOut && (
+                              <div className="w-full md:w-auto px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/40 font-bold text-center text-xs">
+                                Shift Ended
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Performance Leaderboard */}
                     <div className="glass-panel p-8 rounded-3xl space-y-6">
@@ -1285,6 +1404,161 @@ export default function AdminDashboard() {
                     <div className="p-6 border-b border-white/10 bg-gradient-to-r from-accent/10 to-transparent"><h3 className="font-heading font-bold text-xl text-white">Official Holidays 2026</h3></div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm text-left"><thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]"><tr><th className="px-6 py-4 font-semibold">Festival / Occasion</th><th className="px-6 py-4 font-semibold">Date</th><th className="px-6 py-4 font-semibold">Day</th></tr></thead><tbody className="divide-y divide-white/5">{HOLIDAYS_2026.map((h, i) => (<tr key={i} className="hover:bg-white/5 transition-colors"><td className="px-6 py-4 font-medium text-white">{h.name}</td><td className="px-6 py-4 text-accent-cyan font-mono">{h.date}</td><td className="px-6 py-4 text-white/60">{h.day}</td></tr>))}</tbody></table>
+                    </div>
+                  </div>
+                )}
+
+                {tab === 'my-portal' && session?.employeeId && (
+                  <div className="space-y-8">
+                    {/* Shift Control Panel */}
+                    <div className="glass-panel p-8 rounded-3xl relative overflow-hidden bg-gradient-to-r from-accent/15 via-accent-violet/5 to-transparent border-t border-t-white/10 flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="absolute top-[-50%] left-[-10%] w-[350px] h-[350px] bg-accent-violet/10 rounded-full blur-[90px] pointer-events-none"></div>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest text-accent font-semibold px-3 py-1 rounded-full bg-accent/10 border border-accent/20">Portal Shift Control</span>
+                        <h3 className="text-3xl font-heading font-bold text-white mt-4">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</h3>
+                        <p className="text-white/50 mt-1">{new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                        <div className="mt-4 flex items-center gap-2">
+                          <span className="text-white/40 text-xs">Current Shift Status:</span>
+                          <span className={`text-xs px-2 py-0.5 rounded border font-semibold capitalize ${
+                            !todayRec ? 'bg-red-500/15 text-red-400 border-red-500/30' :
+                            todayRec.checkOut ? 'bg-white/10 text-white/50 border-white/20' :
+                            todayRec.onBreak ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' :
+                            'bg-green-500/15 text-green-400 border-green-500/30'
+                          }`}>
+                            {!todayRec ? 'Not Logged In' :
+                             todayRec.checkOut ? 'Completed' :
+                             todayRec.onBreak ? 'On Break' : 'Active'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-4 w-full md:w-auto justify-end">
+                        {!todayRec && (
+                          <button onClick={handleCheckIn} className="px-8 py-4 rounded-2xl bg-green-500/20 text-green-400 border border-green-500/30 font-bold hover:bg-green-500/30 hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] transition-all flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5"/> INITIATE CHECK-IN
+                          </button>
+                        )}
+                        {todayRec && !todayRec.checkOut && (
+                          <>
+                            <button onClick={todayRec.onBreak ? handleEndBreak : handleStartBreak} className="px-6 py-4 rounded-2xl bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-bold hover:bg-yellow-500/30 transition-all flex items-center gap-2">
+                              {todayRec.onBreak ? 'RESUME WORK' : 'START BREAK'}
+                            </button>
+                            <button onClick={handleCheckOut} className="px-8 py-4 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30 font-bold hover:bg-red-500/30 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)] transition-all flex items-center gap-2">
+                              <XCircle className="w-5 h-5"/> CHECK-OUT
+                            </button>
+                          </>
+                        )}
+                        {todayRec?.checkOut && (
+                          <div className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white/50 font-bold">
+                            SHIFT COMPLETED
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      {/* Leave Application Form */}
+                      <div className="lg:col-span-1 space-y-6">
+                        <div className="glass-panel p-6 rounded-3xl border-t border-t-white/5">
+                          <h3 className="font-heading font-bold text-lg mb-6 text-white">Apply for Leave</h3>
+                          <form onSubmit={handleLeaveSubmit} className="flex flex-col gap-5">
+                            <div className="space-y-1.5">
+                              <label className="text-xs uppercase tracking-widest text-white/50 font-semibold">Leave Type</label>
+                              <select value={leaveForm.type} onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent text-white text-sm appearance-none">
+                                <option value="sick">Sick Leave</option>
+                                <option value="casual">Casual Leave</option>
+                                <option value="earned">Earned Leave</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs uppercase tracking-widest text-white/50 font-semibold">From Date</label>
+                              <CustomDateInput value={leaveForm.fromDate} onChange={(e) => setLeaveForm({ ...leaveForm, fromDate: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent text-white text-sm" required />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs uppercase tracking-widest text-white/50 font-semibold">To Date</label>
+                              <CustomDateInput value={leaveForm.toDate} onChange={(e) => setLeaveForm({ ...leaveForm, toDate: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent text-white text-sm" required />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs uppercase tracking-widest text-white/50 font-semibold">Reason</label>
+                              <textarea rows={3} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent text-white text-sm resize-none" placeholder="Brief reason..." required />
+                            </div>
+                            <button type="submit" className="w-full py-4 rounded-xl bg-gradient-to-r from-accent to-accent-violet text-white font-bold hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all">
+                              Submit Request
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+
+                      {/* Attendance Log and Leaves Log */}
+                      <div className="lg:col-span-2 space-y-8">
+                        {/* Attendance Log */}
+                        <div className="glass-panel rounded-3xl overflow-hidden border-t border-t-white/5">
+                          <div className="p-6 border-b border-white/10">
+                            <h3 className="font-heading font-bold text-lg text-white">My Attendance Log</h3>
+                          </div>
+                          <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-xs sticky top-0 z-10">
+                                <tr>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Date</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Check In</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Check Out</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Hours</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {personalAttendance.length === 0 ? (
+                                  <tr><td colSpan="5" className="p-8 text-center text-white/40">No attendance logs found.</td></tr>
+                                ) : personalAttendance.map((r, i) => (
+                                  <tr key={i} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-white">{fmtDate(r.date)}</td>
+                                    <td className="px-6 py-4 text-green-400">{fmtTime(r.checkIn)}</td>
+                                    <td className="px-6 py-4 text-red-400">{r.checkOut ? fmtTime(r.checkOut) : '—'}</td>
+                                    <td className="px-6 py-4 font-mono text-white/70">{r.totalHours !== null ? `${r.totalHours} hrs` : '—'}</td>
+                                    <td className="px-6 py-4"><StatusBadge status={r.status} /></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Leaves Log */}
+                        <div className="glass-panel rounded-3xl overflow-hidden border-t border-t-white/5">
+                          <div className="p-6 border-b border-white/10">
+                            <h3 className="font-heading font-bold text-lg text-white">My Leave Requests</h3>
+                          </div>
+                          <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-xs sticky top-0 z-10">
+                                <tr>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Type</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Dates</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Reason</th>
+                                  <th className="px-6 py-4 font-semibold bg-black/80">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {personalLeaves.length === 0 ? (
+                                  <tr><td colSpan="4" className="p-8 text-center text-white/40">No leave requests found.</td></tr>
+                                ) : personalLeaves.map((l, i) => (
+                                  <tr key={i} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-white capitalize">{l.type}</td>
+                                    <td className="px-6 py-4 text-white/70">{fmtDate(l.fromDate)} <span className="text-white/30 mx-1">→</span> {fmtDate(l.toDate)}</td>
+                                    <td className="px-6 py-4 text-white/60 max-w-[200px] truncate" title={l.reason}>{l.reason}</td>
+                                    <td className="px-6 py-4"><StatusBadge status={l.status} /></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
