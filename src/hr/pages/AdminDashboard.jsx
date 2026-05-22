@@ -545,7 +545,7 @@ export default function AdminDashboard() {
   ];
 
   const NAV_ITEMS = [
-    { id: 'overview', label: 'Command Center', icon: Home },
+    { id: 'overview', label: session?.role === 'superadmin' ? 'Command Center' : 'Admin center', icon: Home },
     { id: 'my-portal', label: 'My Shift & Leave', icon: UserCheck },
     { id: 'employees', label: 'Employees', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: Clock },
@@ -682,7 +682,9 @@ export default function AdminDashboard() {
                       <div className="relative z-10">
                         <h3 className="font-heading font-bold text-2xl text-white mb-2">Zexora Quvixo HR Framework v2.0</h3>
                         <p className="text-white/50 max-w-xl">
-                          Welcome to the Superadmin Command Center. From here, you possess absolute authority over the employee ecosystem, payroll modules, support desking, and global broadcasts.
+                          {session?.role === 'superadmin'
+                            ? 'Welcome to the Superadmin Command Center. From here, you possess absolute authority over the employee ecosystem, payroll modules, support desking, and global broadcasts.'
+                            : 'Welcome to the Admin center. From here, you possess authorized access to manage the employee ecosystem, payroll modules, support desking, and broadcasts.'}
                         </p>
                       </div>
                       {session.role === 'superadmin' && (
