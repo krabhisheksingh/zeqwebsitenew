@@ -16,6 +16,7 @@ import {
 } from '../utils/hrStorage';
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
+import CustomDateInput from '../components/CustomDateInput';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -695,7 +696,7 @@ export default function AdminDashboard() {
                           <input type="email" placeholder="Email" value={empForm.email} onChange={(e) => setEmpForm({...empForm, email: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent-violet text-white text-sm"/>
                           <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-xs pointer-events-none">DOJ:</span>
-                            <input type="date" value={empForm.dateOfJoining} onChange={(e) => setEmpForm({...empForm, dateOfJoining: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 outline-none focus:border-accent-violet text-white text-sm" style={{colorScheme: 'dark'}} required />
+                            <CustomDateInput value={empForm.dateOfJoining} onChange={(e) => setEmpForm({...empForm, dateOfJoining: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 outline-none focus:border-accent-violet text-white text-sm" required leftOffset="pl-12" />
                           </div>
                           <button type="submit" className="md:col-span-2 lg:col-span-3 py-3 rounded-xl bg-accent-violet text-white font-bold hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all">Provision Employee</button>
                         </form>
@@ -753,7 +754,7 @@ export default function AdminDashboard() {
                                     <div className="space-y-2">
                                       <input type="email" value={editEmpForm.email} onChange={(ev) => setEditEmpForm({...editEmpForm, email: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" placeholder="Email" />
                                       <input type="text" value={editEmpForm.phone} onChange={(ev) => setEditEmpForm({...editEmpForm, phone: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" placeholder="Phone" />
-                                      <input type="date" value={editEmpForm.dateOfJoining || ''} onChange={(ev) => setEditEmpForm({...editEmpForm, dateOfJoining: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" style={{colorScheme: 'dark'}} />
+                                      <CustomDateInput value={editEmpForm.dateOfJoining || ''} onChange={(ev) => setEditEmpForm({...editEmpForm, dateOfJoining: ev.target.value})} className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-full" leftOffset="pl-2" fontSize="text-xs" />
                                     </div>
                                   ) : <>{e.email}<br/>{e.phone}<br/><span className="text-[10px] text-accent-cyan mt-1 inline-block">Joined: {e.dateOfJoining ? fmtDate(e.dateOfJoining) : 'N/A'}</span></>}
                                 </td>

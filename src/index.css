@@ -55,3 +55,8 @@ h1, h2, h3, h4, h5, h6 {
 html {
   scroll-behavior: smooth;
 }
+
+/* Custom Date Input formatting helper to hide native text when blurred */
+.hide-date-text::-webkit-datetime-edit {
+  color: transparent !important;
+}
