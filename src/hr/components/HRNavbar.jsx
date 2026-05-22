@@ -29,7 +29,7 @@ export default function HRNavbar({ title }) {
           <User className="w-4 h-4" />
           <span>{session?.name}</span>
           {(session?.role === 'superadmin' || session?.role === 'admin') && (
-            <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full border border-accent/30">Admin</span>
+            <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full border border-accent/30">{session?.role === 'superadmin' ? 'Superadmin' : 'Admin center'}</span>
           )}
         </div>
         <button
