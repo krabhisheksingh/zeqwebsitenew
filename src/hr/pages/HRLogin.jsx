@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, Eye, EyeOff, Shield, User } from 'lucide-react';
-import { findEmployee, setSession, seedInitialData, findEmployeeByEmail } from '../utils/hrStorage';
+import { LogIn, Eye, EyeOff, Shield, User, X, Mail } from 'lucide-react';
+import { findEmployee, setSession, seedInitialData, findEmployeeByEmail, getEmployee, updateEmployee, findEmployeeByIdOrUsername } from '../utils/hrStorage';
 import { auth, provider } from '../utils/firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
+import toast, { Toaster } from 'react-hot-toast';
 const SUPER_ADMIN = {
   username: import.meta.env.VITE_ADMIN_USER || 'superadmin',
   password: import.meta.env.VITE_ADMIN_PASS || 'Admin@2025',
@@ -17,6 +18,67 @@ export default function HRLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [seeding, setSeeding] = useState(true);
+
+  // Forgot Password State
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [forgotForm, setForgotForm] = useState({ id: '', email: '', newPassword: '', confirmPassword: '' });
+  const [verifiedEmpId, setVerifiedEmpId] = useState('');
+  const [forgotError, setForgotError] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [showForgotPass, setShowForgotPass] = useState(false);
+
+  const handleVerifyRecovery = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotLoading(true);
+
+    try {
+      const emp = await findEmployeeByIdOrUsername(forgotForm.id.trim());
+      if (emp && emp.email.trim().toLowerCase() === forgotForm.email.trim().toLowerCase()) {
+        if (emp.status !== 'active') {
+          setForgotError('Account is deactivated. Contact HR.');
+        } else {
+          setVerifiedEmpId(emp.id);
+          setForgotStep(2);
+        }
+      } else {
+        setForgotError('Invalid Employee ID/Username or Email address.');
+      }
+    } catch (err) {
+      setForgotError('Failed to verify identity.');
+    }
+    setForgotLoading(false);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    
+    if (forgotForm.newPassword !== forgotForm.confirmPassword) {
+      setForgotError('Passwords do not match.');
+      return;
+    }
+
+    if (forgotForm.newPassword.length < 4) {
+      setForgotError('Password must be at least 4 characters long.');
+      return;
+    }
+
+    setForgotLoading(true);
+
+    try {
+      await updateEmployee(verifiedEmpId, { password: forgotForm.newPassword });
+      toast.success('Password updated successfully!');
+      setShowForgot(false);
+      setForgotStep(1);
+      setVerifiedEmpId('');
+      setForgotForm({ id: '', email: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setForgotError('Failed to reset password.');
+    }
+    setForgotLoading(false);
+  };
 
   useEffect(() => {
     // Seed initial admin & demo employee if empty
@@ -99,6 +161,7 @@ export default function HRLogin() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      <Toaster position="top-right" toastOptions={{ className: 'glass-panel', style: { background: 'rgba(10,10,15,0.8)', color: '#fff', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' } }} />
       {/* Cinematic 3D Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] rounded-full bg-accent-violet/20 blur-[120px] mix-blend-screen opacity-50 animate-pulse"></div>
@@ -189,7 +252,7 @@ export default function HRLogin() {
                     <input type="checkbox" className="w-4 h-4 rounded bg-black/40 border border-white/20 checked:bg-accent-cyan accent-accent-cyan cursor-pointer" />
                     <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors">Remember me</span>
                   </label>
-                  <button type="button" className="text-xs text-accent-cyan hover:text-white transition-colors hover:underline">Forgot Password?</button>
+                  <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-accent-cyan hover:text-white transition-colors hover:underline">Forgot Password?</button>
                 </div>
 
                 <button type="submit" disabled={loading}
@@ -228,6 +291,129 @@ export default function HRLogin() {
           Zexora Quvixo HR Systems v2.0
         </p>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgot && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowForgot(false); setForgotStep(1); setForgotError(''); setVerifiedEmpId(''); }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="w-full max-w-md glass-panel rounded-3xl border border-white/10 p-8 relative overflow-hidden z-10 bg-background/80"
+            >
+              <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] bg-accent-violet/10 rounded-full blur-[60px] pointer-events-none"></div>
+              
+              <div className="flex justify-between items-center mb-6 relative z-10">
+                <h3 className="text-xl font-heading font-bold text-white">Password Recovery</h3>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgot(false); setForgotStep(1); setForgotError(''); setVerifiedEmpId(''); }}
+                  className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {forgotStep === 1 ? (
+                <form onSubmit={handleVerifyRecovery} className="space-y-5 relative z-10">
+                  <p className="text-xs text-white/50 leading-relaxed">
+                    Enter your Employee ID and registered email address to verify your account identity.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Employee ID</label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <input 
+                        type="text" required placeholder="e.g. EMP001"
+                        value={forgotForm.id} onChange={(e) => setForgotForm({ ...forgotForm, id: e.target.value })}
+                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Email Address</label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <input 
+                        type="email" required placeholder="demo@zexoraquvixo.in"
+                        value={forgotForm.email} onChange={(e) => setForgotForm({ ...forgotForm, email: e.target.value })}
+                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                      />
+                    </div>
+                  </div>
+
+                  {forgotError && (
+                    <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{forgotError}</p>
+                  )}
+
+                  <button type="submit" disabled={forgotLoading}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2">
+                    {forgotLoading ? (
+                      <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
+                    ) : 'VERIFY IDENTITY'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-5 relative z-10">
+                  <p className="text-xs text-white/50 leading-relaxed">
+                    Identity verified for <span className="text-accent-cyan font-semibold">{verifiedEmpId}</span>. Please choose a new secure password.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">New Password</label>
+                    <div className="relative group">
+                      <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <input 
+                        type={showForgotPass ? "text" : "password"} required placeholder="••••••••"
+                        value={forgotForm.newPassword} onChange={(e) => setForgotForm({ ...forgotForm, newPassword: e.target.value })}
+                        className="w-full pl-11 pr-11 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                      />
+                      <button type="button" onClick={() => setShowForgotPass(!showForgotPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                        {showForgotPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Confirm Password</label>
+                    <div className="relative group">
+                      <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <input 
+                        type={showForgotPass ? "text" : "password"} required placeholder="••••••••"
+                        value={forgotForm.confirmPassword} onChange={(e) => setForgotForm({ ...forgotForm, confirmPassword: e.target.value })}
+                        className="w-full pl-11 pr-11 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                      />
+                    </div>
+                  </div>
+
+                  {forgotError && (
+                    <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{forgotError}</p>
+                  )}
+
+                  <button type="submit" disabled={forgotLoading}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent-violet to-purple-600 text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all flex items-center justify-center gap-2">
+                    {forgotLoading ? (
+                      <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
+                    ) : 'RESET PASSWORD'}
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

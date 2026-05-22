@@ -78,6 +78,19 @@ export const findEmployeeByEmail = async (email) => {
   return snap.docs[0].data();
 };
 
+export const findEmployeeByIdOrUsername = async (identifier) => {
+  let q = query(collection(db, 'employees'), where('username', '==', identifier));
+  let snap = await getDocs(q);
+  
+  if (snap.empty) {
+    q = query(collection(db, 'employees'), where('id', '==', identifier));
+    snap = await getDocs(q);
+  }
+  
+  if (snap.empty) return null;
+  return snap.docs[0].data();
+};
+
 
 // ── Attendance — BREAK functions defined FIRST to avoid hoisting issues ────────
 export const endBreak = async (employeeId) => {
