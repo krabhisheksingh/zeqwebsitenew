@@ -88,6 +88,8 @@ export default function AdminDashboard() {
   const [selectedEmpBank, setSelectedEmpBank] = useState(null);
   const [selectedEmpDetails, setSelectedEmpDetails] = useState(null);
   const [detailsTab, setDetailsTab] = useState('profile');
+  const [selectedRole, setSelectedRole] = useState('employee');
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
 
   const printPayslip = (p) => {
     const printWindow = window.open('', '_blank', 'width=800,height=900');
@@ -202,12 +204,20 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!session || session.role !== 'superadmin') {
+    if (!session || (session.role !== 'superadmin' && session.role !== 'admin')) {
       navigate('/employee-login');
       return;
     }
     refresh();
   }, [navigate]);
+
+  useEffect(() => {
+    if (selectedEmpDetails) {
+      setSelectedRole(selectedEmpDetails.role || 'employee');
+      setSelectedPermissions(selectedEmpDetails.permissions || []);
+      setDetailsTab('profile');
+    }
+  }, [selectedEmpDetails]);
 
   const refresh = async () => {
     setDataLoading(true);
@@ -400,6 +410,24 @@ export default function AdminDashboard() {
     } catch(err) { toast.error('Failed to provision employee'); }
   };
 
+  const handleSavePermissions = async () => {
+    try {
+      await updateEmployee(selectedEmpDetails.id, { 
+        role: selectedRole, 
+        permissions: selectedRole === 'admin' ? selectedPermissions : [] 
+      });
+      setSelectedEmpDetails(prev => ({
+        ...prev,
+        role: selectedRole,
+        permissions: selectedRole === 'admin' ? selectedPermissions : []
+      }));
+      toast.success('Access policy updated successfully!');
+      refresh();
+    } catch (err) {
+      toast.error('Failed to update access policy.');
+    }
+  };
+
   const startEditEmp = (emp) => {
     setEditingEmpId(emp.id);
     setEditEmpForm(emp);
@@ -431,6 +459,25 @@ export default function AdminDashboard() {
     }
   };
 
+  const hasPermission = (perm) => {
+    if (session?.role === 'superadmin') return true;
+    const perms = session?.permissions || [];
+    return perms.includes(perm);
+  };
+
+  const ALL_PERMISSIONS = [
+    { key: 'view_employees', label: 'View Employees', desc: 'Read-only access to Workforce Directory' },
+    { key: 'manage_employees', label: 'Manage Employees', desc: 'Add, edit, delete, and unlock bank editing' },
+    { key: 'manage_attendance', label: 'Manage Attendance', desc: 'Access and export employee attendance logs' },
+    { key: 'manage_leaves', label: 'Manage Leaves', desc: 'Approve or reject leave applications' },
+    { key: 'manage_broadcasts', label: 'Manage Broadcasts', desc: 'Create and delete global announcements' },
+    { key: 'manage_tasks', label: 'Manage Work Logs', desc: 'View employee performance and sales logs' },
+    { key: 'manage_payroll', label: 'Manage Payroll', desc: 'Generate and view employee payslips' },
+    { key: 'manage_docs', label: 'Manage Docs Vault', desc: 'Verify documents and verify via DigiLocker' },
+    { key: 'manage_helpdesk', label: 'Manage Support Desk', desc: 'View and resolve employee help tickets' },
+    { key: 'manage_recognition', label: 'Manage Recognition', desc: 'Issue stars, badges and awards' },
+  ];
+
   const NAV_ITEMS = [
     { id: 'overview', label: 'Command Center', icon: Home },
     { id: 'employees', label: 'Employees', icon: Users },
@@ -444,6 +491,26 @@ export default function AdminDashboard() {
     { id: 'recognition', label: 'Recognition', icon: Award },
     { id: 'holidays', label: 'Calendar', icon: Calendar },
   ];
+
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (item.id === 'overview' || item.id === 'holidays') return true;
+    if (item.id === 'employees') return hasPermission('view_employees') || hasPermission('manage_employees');
+    if (item.id === 'attendance') return hasPermission('manage_attendance');
+    if (item.id === 'leave') return hasPermission('manage_leaves');
+    if (item.id === 'announcements') return hasPermission('manage_broadcasts');
+    if (item.id === 'tasks') return hasPermission('manage_tasks');
+    if (item.id === 'payroll') return hasPermission('manage_payroll');
+    if (item.id === 'documents') return hasPermission('manage_docs');
+    if (item.id === 'helpdesk') return hasPermission('manage_helpdesk');
+    if (item.id === 'recognition') return hasPermission('manage_recognition');
+    return false;
+  });
+
+  useEffect(() => {
+    if (filteredNavItems.length > 0 && !filteredNavItems.some(n => n.id === tab)) {
+      setTab('overview');
+    }
+  }, [tab, filteredNavItems]);
 
   if (!session) return null;
 
@@ -465,11 +532,11 @@ export default function AdminDashboard() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-accent-violet to-accent-cyan flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)]">
             <ShieldAlert className="w-5 h-5 text-white" />
           </div>
-          <h2 className="font-heading font-bold text-lg tracking-wide text-white">Superadmin</h2>
+          <h2 className="font-heading font-bold text-lg tracking-wide text-white">{session.role === 'superadmin' ? 'Superadmin' : 'Admin'}</h2>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1 scrollbar-hide">
-          {NAV_ITEMS.map((item) => {
+          {filteredNavItems.map((item) => {
             const active = tab === item.id;
             return (
               <button key={item.id} onClick={() => { setTab(item.id); setSidebarOpen(false); }}
@@ -496,13 +563,13 @@ export default function AdminDashboard() {
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-xl md:text-2xl font-heading font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60 capitalize">
-              {NAV_ITEMS.find(n => n.id === tab)?.label || 'Dashboard'}
+              {filteredNavItems.find(n => n.id === tab)?.label || 'Dashboard'}
             </h1>
           </div>
           <div className="flex items-center gap-3 pl-4">
             <div className="text-right">
-              <p className="text-sm font-semibold text-white">System Admin</p>
-              <p className="text-[10px] text-accent-violet font-mono tracking-widest uppercase">Level 0 Clearance</p>
+              <p className="text-sm font-semibold text-white">{session.name || 'System Admin'}</p>
+              <p className="text-[10px] text-accent-violet font-mono tracking-widest uppercase">{session.role === 'superadmin' ? 'Level 0 Clearance' : 'Level 1 Clearance'}</p>
             </div>
           </div>
         </header>
@@ -550,11 +617,13 @@ export default function AdminDashboard() {
                           Welcome to the Superadmin Command Center. From here, you possess absolute authority over the employee ecosystem, payroll modules, support desking, and global broadcasts.
                         </p>
                       </div>
-                      <div className="relative z-10 shrink-0">
-                        <button onClick={handleWipeData} className="px-6 py-3 rounded-xl bg-red-500/10 text-red-400 font-bold hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all border border-red-500/30 flex items-center gap-2">
-                          <ShieldAlert className="w-4 h-4" /> Wipe All Data
-                        </button>
-                      </div>
+                      {session.role === 'superadmin' && (
+                        <div className="relative z-10 shrink-0">
+                          <button onClick={handleWipeData} className="px-6 py-3 rounded-xl bg-red-500/10 text-red-400 font-bold hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all border border-red-500/30 flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4" /> Wipe All Data
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Star Performer Spotlight */}
@@ -676,11 +745,13 @@ export default function AdminDashboard() {
                   <div className="glass-panel rounded-3xl overflow-hidden">
                     <div className="p-6 border-b border-white/10 flex justify-between items-center">
                       <h3 className="font-heading font-bold text-lg">Workforce Directory</h3>
-                      <button onClick={() => setShowAddEmp(!showAddEmp)} className="px-5 py-2 rounded-xl bg-accent-violet/20 text-accent-violet font-semibold text-sm hover:bg-accent-violet/30 transition-all border border-accent-violet/30 flex items-center gap-2">
-                        {showAddEmp ? <XCircle className="w-4 h-4"/> : <UserPlus className="w-4 h-4"/>} {showAddEmp ? 'Close Form' : 'Add Employee'}
-                      </button>
+                      {hasPermission('manage_employees') && (
+                        <button onClick={() => setShowAddEmp(!showAddEmp)} className="px-5 py-2 rounded-xl bg-accent-violet/20 text-accent-violet font-semibold text-sm hover:bg-accent-violet/30 transition-all border border-accent-violet/30 flex items-center gap-2">
+                          {showAddEmp ? <XCircle className="w-4 h-4"/> : <UserPlus className="w-4 h-4"/>} {showAddEmp ? 'Close Form' : 'Add Employee'}
+                        </button>
+                      )}
                     </div>
-                    {showAddEmp && (
+                    {showAddEmp && hasPermission('manage_employees') && (
                       <div className="p-6 border-b border-white/10 bg-black/20">
                         <form onSubmit={handleEmpSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           <input type="text" placeholder="Emp ID (e.g. EMP002)" value={empForm.id} onChange={(e) => setEmpForm({...empForm, id: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-accent-violet text-white text-sm" required/>
@@ -781,20 +852,24 @@ export default function AdminDashboard() {
                                       ) : (
                                         <span className="text-white/20 text-xs italic">No Bank Details</span>
                                       )}
-                                      <button 
-                                        onClick={() => handleToggleBankEdit(e.id, e.allowBankEdit)} 
-                                        className={`text-xs flex items-center gap-1 cursor-pointer transition-colors ${
-                                          e.allowBankEdit 
-                                            ? 'text-green-400 hover:text-green-300 font-semibold' 
-                                            : 'text-white/40 hover:text-white/60'
-                                        }`}
-                                        title={e.allowBankEdit ? "Lock Bank Editing" : "Allow Bank Editing"}
-                                      >
-                                        {e.allowBankEdit ? <ShieldCheck className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                                        {e.allowBankEdit ? 'Unlocked' : 'Locked'}
-                                      </button>
-                                      <button onClick={() => startEditEmp(e)} className="text-accent-cyan hover:text-white underline text-xs">Edit</button>
-                                      <button onClick={() => handleDeleteEmployee(e.id, e.fullName)} className="text-red-400 hover:text-red-300 underline text-xs">Delete</button>
+                                      {hasPermission('manage_employees') && (
+                                        <>
+                                          <button 
+                                            onClick={() => handleToggleBankEdit(e.id, e.allowBankEdit)} 
+                                            className={`text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                                              e.allowBankEdit 
+                                                ? 'text-green-400 hover:text-green-300 font-semibold' 
+                                                : 'text-white/40 hover:text-white/60'
+                                            }`}
+                                            title={e.allowBankEdit ? "Lock Bank Editing" : "Allow Bank Editing"}
+                                          >
+                                            {e.allowBankEdit ? <ShieldCheck className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                                            {e.allowBankEdit ? 'Unlocked' : 'Locked'}
+                                          </button>
+                                          <button onClick={() => startEditEmp(e)} className="text-accent-cyan hover:text-white underline text-xs">Edit</button>
+                                          <button onClick={() => handleDeleteEmployee(e.id, e.fullName)} className="text-red-400 hover:text-red-300 underline text-xs">Delete</button>
+                                        </>
+                                      )}
                                     </div>
                                   )}
                                 </td>
@@ -864,7 +939,7 @@ export default function AdminDashboard() {
                               <td className="px-6 py-4 text-white/60 text-xs">{fmtDate(l.fromDate)} → {fmtDate(l.toDate)}</td>
                               <td className="px-6 py-4 text-white/40 max-w-[200px] truncate" title={l.reason}>{l.reason}</td>
                               <td className="px-6 py-4 text-right">
-                                {l.status === 'pending' ? (
+                               {l.status === 'pending' && hasPermission('manage_leaves') ? (
                                   <div className="flex items-center justify-end gap-2">
                                     <button onClick={() => handleLeaveAction(l._docId, 'approved')} className="p-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/40"><CheckCircle2 className="w-4 h-4"/></button>
                                     <button onClick={() => handleLeaveAction(l._docId, 'rejected')} className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40"><XCircle className="w-4 h-4"/></button>
@@ -917,57 +992,97 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* ── ADMIN PAYROLL ── */}
                 {tab === 'payroll' && (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1 glass-panel p-6 rounded-3xl h-fit">
-                      <h3 className="font-heading font-bold text-lg mb-6 text-white">Generate Payslip</h3>
-                      <form onSubmit={handlePaySubmit} className="flex flex-col gap-4">
-                        <select value={payForm.employeeId} onChange={(e) => setPayForm({...payForm, employeeId: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none" required>
-                          <option value="">Select Employee...</option>
-                          {employees.map(e => <option key={e.id} value={e.id}>{e.fullName} ({e.id})</option>)}
-                        </select>
-                        <input type="text" placeholder="Month (e.g. May)" value={payForm.month} onChange={(e) => setPayForm({...payForm, month: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm" required/>
-                        <input type="number" placeholder="Net Pay (₹)" value={payForm.netPay} onChange={(e) => setPayForm({...payForm, netPay: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm" required/>
-                        <button type="submit" className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500/80 to-green-600 text-white font-bold hover:shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all flex justify-center items-center gap-2"><DollarSign className="w-4 h-4"/> Issue Payslip</button>
-                      </form>
-                    </div>
-                    <div className="lg:col-span-2 glass-panel rounded-3xl overflow-hidden">
-                      <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Issued Payslips</h3></div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                          <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
-                            <tr>
-                              <th className="px-6 py-4 font-semibold">Employee</th>
-                              <th className="px-6 py-4 font-semibold">Period</th>
-                              <th className="px-6 py-4 font-semibold">Amount</th>
-                              <th className="px-6 py-4 font-semibold">Issued On</th>
-                              <th className="px-6 py-4 font-semibold text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                            {payslips.map((p, i) => (
-                              <tr key={i} className="hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-4 font-medium text-white">{p.employeeName}</td>
-                                <td className="px-6 py-4 text-white/70">{p.month} {p.year}</td>
-                                <td className="px-6 py-4 text-green-400 font-mono">₹{p.netPay.toLocaleString()}</td>
-                                <td className="px-6 py-4 text-white/40 text-xs">{fmtDate(p.createdAt)}</td>
-                                <td className="px-6 py-4 text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <button onClick={() => setSelectedPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-white/10 transition-all border border-white/10 flex items-center gap-1 font-semibold">
-                                      <Eye className="w-3.5 h-3.5 text-accent-cyan" /> View
-                                    </button>
-                                    <button onClick={() => printPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-green-500/20 hover:text-green-300 hover:border-green-500/30 transition-all border border-white/10 flex items-center gap-1 font-semibold">
-                                      <Download className="w-3.5 h-3.5 text-green-400" /> Download
-                                    </button>
-                                  </div>
-                                </td>
+                    {hasPermission('manage_payroll') ? (
+                      <>
+                        <div className="lg:col-span-1 glass-panel p-6 rounded-3xl h-fit">
+                          <h3 className="font-heading font-bold text-lg mb-6 text-white">Generate Payslip</h3>
+                          <form onSubmit={handlePaySubmit} className="flex flex-col gap-4">
+                            <select value={payForm.employeeId} onChange={(e) => setPayForm({...payForm, employeeId: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none" required>
+                              <option value="">Select Employee...</option>
+                              {employees.map(e => <option key={e.id} value={e.id}>{e.fullName} ({e.id})</option>)}
+                            </select>
+                            <input type="text" placeholder="Month (e.g. May)" value={payForm.month} onChange={(e) => setPayForm({...payForm, month: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm" required/>
+                            <input type="number" placeholder="Net Pay (₹)" value={payForm.netPay} onChange={(e) => setPayForm({...payForm, netPay: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm" required/>
+                            <button type="submit" className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500/80 to-green-600 text-white font-bold hover:shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all flex justify-center items-center gap-2"><DollarSign className="w-4 h-4"/> Issue Payslip</button>
+                          </form>
+                        </div>
+                        <div className="lg:col-span-2 glass-panel rounded-3xl overflow-hidden">
+                          <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Issued Payslips</h3></div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
+                                <tr>
+                                  <th className="px-6 py-4 font-semibold">Employee</th>
+                                  <th className="px-6 py-4 font-semibold">Period</th>
+                                  <th className="px-6 py-4 font-semibold">Amount</th>
+                                  <th className="px-6 py-4 font-semibold">Issued On</th>
+                                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {payslips.map((p, i) => (
+                                  <tr key={i} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-white">{p.employeeName}</td>
+                                    <td className="px-6 py-4 text-white/70">{p.month} {p.year}</td>
+                                    <td className="px-6 py-4 text-green-400 font-mono">₹{p.netPay.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-white/40 text-xs">{fmtDate(p.createdAt)}</td>
+                                    <td className="px-6 py-4 text-right">
+                                      <div className="flex justify-end gap-2">
+                                        <button onClick={() => setSelectedPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-white/10 transition-all border border-white/10 flex items-center gap-1 font-semibold">
+                                          <Eye className="w-3.5 h-3.5 text-accent-cyan" /> View
+                                        </button>
+                                        <button onClick={() => printPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-green-500/20 hover:text-green-300 hover:border-green-500/30 transition-all border border-white/10 flex items-center gap-1 font-semibold">
+                                          <Download className="w-3.5 h-3.5 text-green-400" /> Download
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="lg:col-span-3 glass-panel rounded-3xl overflow-hidden">
+                        <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Issued Payslips</h3></div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
+                              <tr>
+                                <th className="px-6 py-4 font-semibold">Employee</th>
+                                <th className="px-6 py-4 font-semibold">Period</th>
+                                <th className="px-6 py-4 font-semibold">Amount</th>
+                                <th className="px-6 py-4 font-semibold">Issued On</th>
+                                <th className="px-6 py-4 font-semibold text-right">Actions</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                              {payslips.map((p, i) => (
+                                <tr key={i} className="hover:bg-white/5 transition-colors">
+                                  <td className="px-6 py-4 font-medium text-white">{p.employeeName}</td>
+                                  <td className="px-6 py-4 text-white/70">{p.month} {p.year}</td>
+                                  <td className="px-6 py-4 text-green-400 font-mono">₹{p.netPay.toLocaleString()}</td>
+                                  <td className="px-6 py-4 text-white/40 text-xs">{fmtDate(p.createdAt)}</td>
+                                  <td className="px-6 py-4 text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <button onClick={() => setSelectedPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-white/10 transition-all border border-white/10 flex items-center gap-1 font-semibold">
+                                        <Eye className="w-3.5 h-3.5 text-accent-cyan" /> View
+                                      </button>
+                                      <button onClick={() => printPayslip(p)} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/80 text-xs hover:bg-green-500/20 hover:text-green-300 hover:border-green-500/30 transition-all border border-white/10 flex items-center gap-1 font-semibold">
+                                        <Download className="w-3.5 h-3.5 text-green-400" /> Download
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -1060,45 +1175,73 @@ export default function AdminDashboard() {
                 {/* ── ADMIN RECOGNITION ── */}
                 {tab === 'recognition' && (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1 glass-panel p-6 rounded-3xl h-fit border-yellow-500/20">
-                      <h3 className="font-heading font-bold text-lg mb-6 text-yellow-400 flex items-center gap-2"><Award className="w-5 h-5"/> Award Badge</h3>
-                      <form onSubmit={handleRecSubmit} className="flex flex-col gap-4">
-                        <select value={recForm.employeeId} onChange={(e) => setRecForm({...recForm, employeeId: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none" required>
-                          <option value="">Select Employee...</option>
-                          {employees.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
-                        </select>
-                        <select value={recForm.badgeTitle} onChange={(e) => setRecForm({...recForm, badgeTitle: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none" required>
-                          <option value="Star Performer">Star Performer</option>
-                          <option value="Top Caller">Top Caller</option>
-                          <option value="Culture Champion">Culture Champion</option>
-                        </select>
-                        <textarea rows={3} placeholder="Congratulatory message..." value={recForm.message} onChange={(e) => setRecForm({...recForm, message: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm resize-none" required/>
-                        <button type="submit" className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500/80 to-yellow-600 text-white font-bold hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all">Publish Award</button>
-                      </form>
-                    </div>
-                    <div className="lg:col-span-2 glass-panel rounded-3xl overflow-hidden">
-                      <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Recognition History</h3></div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                          <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
-                            <tr>
-                              <th className="px-6 py-4 font-semibold">Employee</th>
-                              <th className="px-6 py-4 font-semibold">Badge</th>
-                              <th className="px-6 py-4 font-semibold">Message</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                            {recognitions.map((r, i) => (
-                              <tr key={i} className="hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-4 font-medium text-white">{r.employeeName}</td>
-                                <td className="px-6 py-4 text-yellow-400 text-xs font-bold">{r.badgeTitle}</td>
-                                <td className="px-6 py-4 text-white/60 text-xs italic">"{r.message}"</td>
+                    {hasPermission('manage_recognition') ? (
+                      <>
+                        <div className="lg:col-span-1 glass-panel p-6 rounded-3xl h-fit border-yellow-500/20">
+                          <h3 className="font-heading font-bold text-lg mb-6 text-yellow-400 flex items-center gap-2"><Award className="w-5 h-5"/> Award Badge</h3>
+                          <form onSubmit={handleRecSubmit} className="flex flex-col gap-4">
+                            <select value={recForm.employeeId} onChange={(e) => setRecForm({...recForm, employeeId: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none" required>
+                              <option value="">Select Employee...</option>
+                              {employees.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
+                            </select>
+                            <select value={recForm.badgeTitle} onChange={(e) => setRecForm({...recForm, badgeTitle: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none" required>
+                              <option value="Star Performer">Star Performer</option>
+                              <option value="Top Caller">Top Caller</option>
+                              <option value="Culture Champion">Culture Champion</option>
+                            </select>
+                            <textarea rows={3} placeholder="Congratulatory message..." value={recForm.message} onChange={(e) => setRecForm({...recForm, message: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm resize-none" required/>
+                            <button type="submit" className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500/80 to-yellow-600 text-white font-bold hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all">Publish Award</button>
+                          </form>
+                        </div>
+                        <div className="lg:col-span-2 glass-panel rounded-3xl overflow-hidden">
+                          <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Recognition History</h3></div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
+                                <tr>
+                                  <th className="px-6 py-4 font-semibold">Employee</th>
+                                  <th className="px-6 py-4 font-semibold">Badge</th>
+                                  <th className="px-6 py-4 font-semibold">Message</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {recognitions.map((r, i) => (
+                                  <tr key={i} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-white">{r.employeeName}</td>
+                                    <td className="px-6 py-4 text-yellow-400 text-xs font-bold">{r.badgeTitle}</td>
+                                    <td className="px-6 py-4 text-white/60 text-xs italic">"{r.message}"</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="lg:col-span-3 glass-panel rounded-3xl overflow-hidden">
+                        <div className="p-6 border-b border-white/10"><h3 className="font-heading font-bold text-lg text-white">Recognition History</h3></div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-white/5 text-white/40 uppercase tracking-widest text-[10px]">
+                              <tr>
+                                <th className="px-6 py-4 font-semibold">Employee</th>
+                                <th className="px-6 py-4 font-semibold">Badge</th>
+                                <th className="px-6 py-4 font-semibold">Message</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                              {recognitions.map((r, i) => (
+                                <tr key={i} className="hover:bg-white/5 transition-colors">
+                                  <td className="px-6 py-4 font-medium text-white">{r.employeeName}</td>
+                                  <td className="px-6 py-4 text-yellow-400 text-xs font-bold">{r.badgeTitle}</td>
+                                  <td className="px-6 py-4 text-white/60 text-xs italic">"{r.message}"</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -1530,34 +1673,36 @@ export default function AdminDashboard() {
                     <p className="text-sm text-accent-cyan font-semibold mt-1">{emp.designation} • <span className="text-white/60 font-normal">{emp.department}</span></p>
                     <p className="text-xs text-white/40 mt-1 font-mono">Employee ID: {emp.id} | Joined: {emp.dateOfJoining ? fmtDate(emp.dateOfJoining) : 'N/A'}</p>
                   </div>
-                  <div className="shrink-0 flex gap-3">
-                    <button 
-                      onClick={() => handleToggleBankEdit(emp.id, emp.allowBankEdit)}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
-                        emp.allowBankEdit 
-                          ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
-                          : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
-                      }`}
-                    >
-                      {emp.allowBankEdit ? <ShieldCheck className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                      {emp.allowBankEdit ? 'Lock Bank Edit' : 'Unlock Bank Edit'}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setSelectedEmpDetails(null);
-                        startEditEmp(emp);
-                      }}
-                      className="px-4 py-2 bg-accent-violet/20 text-accent-violet rounded-xl border border-accent-violet/30 text-xs font-semibold hover:bg-accent-violet/30 transition-all cursor-pointer"
-                    >
-                      Quick Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteEmployee(emp.id, emp.fullName)}
-                      className="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 text-xs font-semibold hover:bg-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      Delete Account
-                    </button>
-                  </div>
+                  {hasPermission('manage_employees') && (
+                    <div className="shrink-0 flex gap-3">
+                      <button 
+                        onClick={() => handleToggleBankEdit(emp.id, emp.allowBankEdit)}
+                        className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                          emp.allowBankEdit 
+                            ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
+                            : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        {emp.allowBankEdit ? <ShieldCheck className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                        {emp.allowBankEdit ? 'Lock Bank Edit' : 'Unlock Bank Edit'}
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setSelectedEmpDetails(null);
+                          startEditEmp(emp);
+                        }}
+                        className="px-4 py-2 bg-accent-violet/20 text-accent-violet rounded-xl border border-accent-violet/30 text-xs font-semibold hover:bg-accent-violet/30 transition-all cursor-pointer"
+                      >
+                        Quick Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteEmployee(emp.id, emp.fullName)}
+                        className="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 text-xs font-semibold hover:bg-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Tab Navigation */}
@@ -1566,7 +1711,8 @@ export default function AdminDashboard() {
                     { id: 'profile', label: 'Overview & Stats' },
                     { id: 'worklogs', label: 'Work Logs' },
                     { id: 'leaves', label: 'Attendance & Leaves' },
-                    { id: 'bankdocs', label: 'Bank & Docs' }
+                    { id: 'bankdocs', label: 'Bank & Docs' },
+                    ...(session.role === 'superadmin' ? [{ id: 'permissions', label: 'Role & Permissions' }] : [])
                   ].map(t => (
                     <button
                       key={t.id}
@@ -1776,6 +1922,66 @@ export default function AdminDashboard() {
                             ))}
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailsTab === 'permissions' && session.role === 'superadmin' && (
+                    <div className="space-y-6">
+                      <div className="bg-white/5 border border-white/5 rounded-2xl p-5 space-y-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/5 pb-2 mb-3">System Access Policy</h4>
+                        
+                        <div className="flex flex-col gap-2 max-w-xs">
+                          <label className="text-white/60 text-xs font-semibold">User Role</label>
+                          <select 
+                            value={selectedRole} 
+                            onChange={(e) => setSelectedRole(e.target.value)} 
+                            className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none text-white text-sm appearance-none"
+                          >
+                            <option value="employee">Employee (Standard Access)</option>
+                            <option value="admin">Admin (Custom Access)</option>
+                          </select>
+                        </div>
+
+                        {selectedRole === 'admin' && (
+                          <div className="space-y-4 pt-4 border-t border-white/5 animate-fadeIn">
+                            <label className="text-white/60 text-xs font-semibold block">Granular Permissions</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {ALL_PERMISSIONS.map((perm) => {
+                                const isChecked = selectedPermissions.includes(perm.key);
+                                return (
+                                  <label key={perm.key} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5 cursor-pointer">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        if (isChecked) {
+                                          setSelectedPermissions(selectedPermissions.filter(k => k !== perm.key));
+                                        } else {
+                                          setSelectedPermissions([...selectedPermissions, perm.key]);
+                                        }
+                                      }}
+                                      className="mt-0.5 rounded border-white/10 bg-black/40 text-accent-violet focus:ring-accent-violet focus:ring-offset-black"
+                                    />
+                                    <div>
+                                      <span className="text-white text-xs font-semibold block">{perm.label}</span>
+                                      <span className="text-white/40 text-[10px] block mt-0.5">{perm.desc}</span>
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-4 border-t border-white/5 flex justify-end">
+                          <button 
+                            onClick={handleSavePermissions}
+                            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-accent-violet to-accent text-white text-xs font-bold hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all cursor-pointer"
+                          >
+                            Save Access Policy
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

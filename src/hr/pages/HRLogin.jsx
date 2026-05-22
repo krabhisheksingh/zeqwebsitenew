@@ -38,9 +38,16 @@ export default function HRLogin() {
       const { result, reason } = await findEmployee(form.username, form.password);
       if (result) {
         setSession({
-          role: result.role, employeeId: result.id, name: result.fullName,
+          role: result.role,
+          employeeId: result.id,
+          name: result.fullName,
+          permissions: result.permissions || [],
         });
-        navigate('/employee-login/dashboard');
+        if (result.role === 'superadmin' || result.role === 'admin') {
+          navigate('/employee-login/admin');
+        } else {
+          navigate('/employee-login/dashboard');
+        }
       } else {
         const msgs = {
           not_found: 'Username not found.',
@@ -69,9 +76,16 @@ export default function HRLogin() {
           await signOut(auth);
         } else {
           setSession({
-            role: emp.role, employeeId: emp.id, name: emp.fullName,
+            role: emp.role,
+            employeeId: emp.id,
+            name: emp.fullName,
+            permissions: emp.permissions || [],
           });
-          navigate('/employee-login/dashboard');
+          if (emp.role === 'superadmin' || emp.role === 'admin') {
+            navigate('/employee-login/admin');
+          } else {
+            navigate('/employee-login/dashboard');
+          }
         }
       } else {
         setError('This Gmail is not registered in our system.');

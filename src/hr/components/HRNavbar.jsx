@@ -28,7 +28,7 @@ export default function HRNavbar({ title }) {
         <div className="hidden sm:flex items-center gap-2 text-sm text-foreground/60">
           <User className="w-4 h-4" />
           <span>{session?.name}</span>
-          {session?.role === 'superadmin' && (
+          {(session?.role === 'superadmin' || session?.role === 'admin') && (
             <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full border border-accent/30">Admin</span>
           )}
         </div>

@@ -48,9 +48,9 @@ function App() {
       {isHRRoute && (
         <Routes location={location} key={location.pathname}>
           <Route path="/employee-login" element={<HRLogin />} />
-          <Route path="/employee-login/dashboard" element={<HRProtected role="employee"><EmployeeDashboard /></HRProtected>} />
-          <Route path="/employee-login/bank-details" element={<HRProtected role="employee"><BankDetails /></HRProtected>} />
-          <Route path="/employee-login/admin" element={<HRProtected role="superadmin"><AdminDashboard /></HRProtected>} />
+          <Route path="/employee-login/dashboard" element={<HRProtected allowedRoles={['employee']}><EmployeeDashboard /></HRProtected>} />
+          <Route path="/employee-login/bank-details" element={<HRProtected allowedRoles={['employee']}><BankDetails /></HRProtected>} />
+          <Route path="/employee-login/admin" element={<HRProtected allowedRoles={['superadmin', 'admin']}><AdminDashboard /></HRProtected>} />
         </Routes>
       )}
 
