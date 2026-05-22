@@ -27,6 +27,81 @@ export default function HRLogin() {
   const [forgotError, setForgotError] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [showForgotPass, setShowForgotPass] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [enteredCode, setEnteredCode] = useState('');
+
+  const closeForgotModal = () => {
+    setShowForgot(false);
+    setForgotStep(1);
+    setForgotError('');
+    setVerifiedEmpId('');
+    setVerificationCode('');
+    setEnteredCode('');
+    setForgotForm({ id: '', email: '', newPassword: '', confirmPassword: '' });
+  };
+
+  const sendVerificationCode = async (emp, code) => {
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+    if (!serviceId || !templateId || !publicKey) {
+      toast.success(
+        <div>
+          <span className="font-semibold text-amber-400 block mb-1">⚠️ EmailJS Not Configured</span>
+          <span className="text-[10px] block text-white/60">Configure environment keys in your <code>.env</code> file to send actual emails.</span>
+          <span className="text-xs block mt-2 text-white">Your verification code is: <strong className="text-accent-cyan text-sm font-mono bg-white/10 px-1.5 py-0.5 rounded">{code}</strong></span>
+        </div>,
+        { duration: 15000 }
+      );
+      console.log(`[MOCK EMAIL] Verification code for ${emp.fullName} (${emp.email}): ${code}`);
+      return true;
+    }
+
+    try {
+      const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          service_id: serviceId,
+          template_id: templateId,
+          user_id: publicKey,
+          template_params: {
+            to_name: emp.fullName,
+            to_email: emp.email.trim(),
+            verification_code: code,
+            otp: code,
+            code: code,
+            otp_code: code,
+            verificationCode: code,
+            expiry_time: new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            valid_till: new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Verification code sent to ${emp.email}`);
+        return true;
+      } else {
+        const errText = await response.text();
+        throw new Error(errText || 'EmailJS error');
+      }
+    } catch (err) {
+      console.error('EmailJS send error:', err);
+      toast.error(
+        <div>
+          <span className="font-semibold text-red-400 block mb-1">❌ Failed to send email</span>
+          <span className="text-[10px] block text-white/60">Error: {err.message || 'Network error'}</span>
+          <span className="text-xs block mt-2 text-white">Temporary verification code: <strong className="text-accent-cyan text-sm font-mono bg-white/10 px-1.5 py-0.5 rounded">{code}</strong></span>
+        </div>,
+        { duration: 15000 }
+      );
+      return true; // Return true so they can test with the displayed code
+    }
+  };
 
   const handleVerifyRecovery = async (e) => {
     e.preventDefault();
@@ -40,6 +115,9 @@ export default function HRLogin() {
           setForgotError('Account is deactivated. Contact HR.');
         } else {
           setVerifiedEmpId(emp.id);
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          setVerificationCode(code);
+          await sendVerificationCode(emp, code);
           setForgotStep(2);
         }
       } else {
@@ -47,6 +125,34 @@ export default function HRLogin() {
       }
     } catch (err) {
       setForgotError('Failed to verify identity.');
+    }
+    setForgotLoading(false);
+  };
+
+  const handleVerifyCode = (e) => {
+    e.preventDefault();
+    setForgotError('');
+    if (enteredCode.trim() === verificationCode) {
+      setForgotStep(3);
+    } else {
+      setForgotError('Invalid verification code. Please try again.');
+    }
+  };
+
+  const handleResendCode = async () => {
+    setForgotLoading(true);
+    setForgotError('');
+    try {
+      const emp = await findEmployeeByIdOrUsername(forgotForm.id.trim());
+      if (emp) {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        setVerificationCode(code);
+        await sendVerificationCode(emp, code);
+      } else {
+        setForgotError('Failed to resend code.');
+      }
+    } catch (err) {
+      setForgotError('Failed to resend code.');
     }
     setForgotLoading(false);
   };
@@ -70,10 +176,7 @@ export default function HRLogin() {
     try {
       await updateEmployee(verifiedEmpId, { password: forgotForm.newPassword });
       toast.success('Password updated successfully!');
-      setShowForgot(false);
-      setForgotStep(1);
-      setVerifiedEmpId('');
-      setForgotForm({ id: '', email: '', newPassword: '', confirmPassword: '' });
+      closeForgotModal();
     } catch (err) {
       setForgotError('Failed to reset password.');
     }
@@ -300,7 +403,7 @@ export default function HRLogin() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => { setShowForgot(false); setForgotStep(1); setForgotError(''); setVerifiedEmpId(''); }}
+              onClick={closeForgotModal}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             
@@ -317,14 +420,14 @@ export default function HRLogin() {
                 <h3 className="text-xl font-heading font-bold text-white">Password Recovery</h3>
                 <button
                   type="button"
-                  onClick={() => { setShowForgot(false); setForgotStep(1); setForgotError(''); setVerifiedEmpId(''); }}
+                  onClick={closeForgotModal}
                   className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {forgotStep === 1 ? (
+              {forgotStep === 1 && (
                 <form onSubmit={handleVerifyRecovery} className="space-y-5 relative z-10">
                   <p className="text-xs text-white/50 leading-relaxed">
                     Enter your Employee ID and registered email address to verify your account identity.
@@ -365,7 +468,46 @@ export default function HRLogin() {
                     ) : 'VERIFY IDENTITY'}
                   </button>
                 </form>
-              ) : (
+              )}
+
+              {forgotStep === 2 && (
+                <form onSubmit={handleVerifyCode} className="space-y-5 relative z-10">
+                  <p className="text-xs text-white/50 leading-relaxed">
+                    A 6-digit verification code has been sent to <span className="text-accent-cyan font-semibold">{forgotForm.email}</span>. Please enter it below.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Verification Code</label>
+                    <div className="relative group">
+                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <input 
+                        type="text" required placeholder="e.g. 123456" maxLength={6}
+                        value={enteredCode} onChange={(e) => setEnteredCode(e.target.value.replace(/\D/g, ''))}
+                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20 font-mono tracking-widest text-center" 
+                      />
+                    </div>
+                  </div>
+
+                  {forgotError && (
+                    <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{forgotError}</p>
+                  )}
+
+                  <div className="flex gap-4">
+                    <button type="button" onClick={handleResendCode} disabled={forgotLoading}
+                      className="w-1/2 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-bold text-xs hover:bg-white/10 hover:text-white transition-all disabled:opacity-50">
+                      RESEND CODE
+                    </button>
+                    <button type="submit" disabled={forgotLoading}
+                      className="w-1/2 py-3 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-white font-bold text-xs hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      {forgotLoading ? (
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
+                      ) : 'VERIFY CODE'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {forgotStep === 3 && (
                 <form onSubmit={handleResetPassword} className="space-y-5 relative z-10">
                   <p className="text-xs text-white/50 leading-relaxed">
                     Identity verified for <span className="text-accent-cyan font-semibold">{verifiedEmpId}</span>. Please choose a new secure password.

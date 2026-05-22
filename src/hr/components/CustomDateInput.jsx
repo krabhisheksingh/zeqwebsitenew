@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 const CustomDateInput = ({
@@ -38,19 +38,7 @@ const CustomDateInput = ({
     }
   }, [value]);
 
-  // Click outside to close calendar
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-        validateAndTrigger();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [inputValue]);
-
-  const validateAndTrigger = () => {
+  const validateAndTrigger = useCallback(() => {
     if (inputValue) {
       const parts = inputValue.split('/');
       if (parts.length === 3) {
@@ -75,7 +63,21 @@ const CustomDateInput = ({
     } else {
       onChange({ target: { value: '' } });
     }
-  };
+  }, [inputValue, value, onChange]);
+
+  // Click outside to close calendar
+  useEffect(() => {
+    if (!isOpen) return; // Only listen for clicks outside if calendar is open
+
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+        validateAndTrigger();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, validateAndTrigger]);
 
   const handleInputChange = (e) => {
     let val = e.target.value.replace(/\D/g, ''); // digits only
