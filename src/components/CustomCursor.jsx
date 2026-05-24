@@ -3,15 +3,29 @@ import { motion } from 'framer-motion';
 
 export default function CustomCursor() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [hasHoverSupport, setHasHoverSupport] = useState(false);
 
   useEffect(() => {
+    // Detect if device supports hover
+    const mediaQuery = window.matchMedia('(hover: hover)');
+    setHasHoverSupport(mediaQuery.matches);
+
+    // Listen for changes (e.g. connecting a mouse to an iPad or rotating)
+    const handler = (e) => setHasHoverSupport(e.matches);
+    mediaQuery.addEventListener('change', handler);
+
     const updateMousePosition = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
 
     window.addEventListener('mousemove', updateMousePosition);
-    return () => window.removeEventListener('mousemove', updateMousePosition);
+    return () => {
+      mediaQuery.removeEventListener('change', handler);
+      window.removeEventListener('mousemove', updateMousePosition);
+    };
   }, []);
+
+  if (!hasHoverSupport) return null;
 
   return (
     <>

@@ -7,8 +7,20 @@ import {
 export const getSession = () => {
   try { return JSON.parse(localStorage.getItem('hr_session')) || null; } catch { return null; }
 };
-export const setSession = (data) => localStorage.setItem('hr_session', JSON.stringify(data));
-export const clearSession = () => localStorage.removeItem('hr_session');
+export const setSession = (data) => {
+  try {
+    localStorage.setItem('hr_session', JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to set session in localStorage:', e);
+  }
+};
+export const clearSession = () => {
+  try {
+    localStorage.removeItem('hr_session');
+  } catch (e) {
+    console.error('Failed to clear session in localStorage:', e);
+  }
+};
 
 // ── Seed ──────────────────────────────────────────────────────────────────────
 export const seedInitialData = async () => {

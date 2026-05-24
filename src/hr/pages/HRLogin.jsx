@@ -185,7 +185,13 @@ export default function HRLogin() {
 
   useEffect(() => {
     // Seed initial admin & demo employee if empty
-    seedInitialData().then(() => setSeeding(false));
+    seedInitialData()
+      .then(() => setSeeding(false))
+      .catch((err) => {
+        console.error("Database seeding failed:", err);
+        setSeeding(false);
+        toast.error("Database unavailable. Sign-in features might be limited.");
+      });
   }, []);
 
   const handleLogin = async (e) => {

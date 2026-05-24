@@ -18,6 +18,18 @@ import {
 import { Tilt } from 'react-tilt';
 import toast, { Toaster } from 'react-hot-toast';
 import CustomDateInput from '../components/CustomDateInput';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  AreaChart,
+  Area
+} from 'recharts';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -58,6 +70,8 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const session = getSession();
   const [tab, setTab] = useState('overview');
+  const [leaderboardView, setLeaderboardView] = useState('table');
+  const [chartMetric, setChartMetric] = useState('productivity');
   
   const [stats, setStats] = useState(null);
   const [employees, setEmployees] = useState([]);
@@ -470,30 +484,78 @@ export default function AdminDashboard() {
     const callsByEmpId = {};
     const leadsByEmpId = {};
     const followupsByEmpId = {};
+    const taskCountByEmpId = {};
+    const attendanceByEmpId = {};
 
+    // 1. Process tasks (work logs)
     tasks.forEach(t => {
       if (t.employeeId) {
         salesByEmpId[t.employeeId] = (salesByEmpId[t.employeeId] || 0) + (Number(t.sales) || 0);
         callsByEmpId[t.employeeId] = (callsByEmpId[t.employeeId] || 0) + (Number(t.calls) || 0);
         leadsByEmpId[t.employeeId] = (leadsByEmpId[t.employeeId] || 0) + (Number(t.leads) || 0);
         followupsByEmpId[t.employeeId] = (followupsByEmpId[t.employeeId] || 0) + (Number(t.followups) || 0);
+        taskCountByEmpId[t.employeeId] = (taskCountByEmpId[t.employeeId] || 0) + 1;
       }
     });
 
+    // 2. Process attendance records
+    attendance.forEach(r => {
+      if (r.employeeId && r.status === 'present') {
+        attendanceByEmpId[r.employeeId] = (attendanceByEmpId[r.employeeId] || 0) + 1;
+      }
+    });
+
+    // 3. Map to employees
     const rankedList = employees.map(emp => {
       const sales = salesByEmpId[emp.id] || 0;
       const calls = callsByEmpId[emp.id] || 0;
       const leads = leadsByEmpId[emp.id] || 0;
       const followups = followupsByEmpId[emp.id] || 0;
+      const completedTasks = taskCountByEmpId[emp.id] || 0;
+      const presentDays = attendanceByEmpId[emp.id] || 0;
+
       return {
         ...emp,
         totalSales: sales,
         totalCalls: calls,
         totalLeads: leads,
-        totalFollowups: followups
+        totalFollowups: followups,
+        completedTasks: completedTasks,
+        presentDays: presentDays,
+        badges: []
       };
     });
 
+    // 4. Find max values for badge assignment
+    let maxSales = 0, maxLeads = 0, maxCalls = 0, maxTasks = 0, maxAttendance = 0;
+    rankedList.forEach(e => {
+      if (e.totalSales > maxSales) maxSales = e.totalSales;
+      if (e.totalLeads > maxLeads) maxLeads = e.totalLeads;
+      if (e.totalCalls > maxCalls) maxCalls = e.totalCalls;
+      if (e.completedTasks > maxTasks) maxTasks = e.completedTasks;
+      if (e.presentDays > maxAttendance) maxAttendance = e.presentDays;
+    });
+
+    // 5. Award Badges dynamically
+    rankedList.forEach(e => {
+      if (e.totalSales > 0 && e.totalSales === maxSales) {
+        e.badges.push({ type: 'sales', icon: '🥇', label: 'Top Seller', desc: 'Highest cumulative sales closed', color: 'from-amber-500/20 to-yellow-500/30 text-yellow-400 border-yellow-500/30' });
+      }
+      if (e.totalLeads > 0 && e.totalLeads === maxLeads) {
+        e.badges.push({ type: 'leads', icon: '⚡', label: 'Lead Machine', desc: 'Most leads generated', color: 'from-cyan-500/20 to-blue-500/30 text-accent-cyan border-cyan-500/30' });
+      }
+      if (e.totalCalls > 0 && e.totalCalls === maxCalls) {
+        e.badges.push({ type: 'calls', icon: '📞', label: 'Call Champion', desc: 'Most customer phone calls placed', color: 'from-green-500/20 to-emerald-500/30 text-green-400 border-green-500/30' });
+      }
+      if (e.completedTasks > 0 && e.completedTasks === maxTasks) {
+        e.badges.push({ type: 'tasks', icon: '🏆', label: 'Task Master', desc: 'Most daily work logs submitted', color: 'from-purple-500/20 to-indigo-500/30 text-purple-400 border-purple-500/30' });
+      }
+      if (e.presentDays > 0 && e.presentDays === maxAttendance) {
+        e.badges.push({ type: 'attendance', icon: '⏰', label: 'Punctual Pro', desc: 'Perfect monthly attendance rate', color: 'from-pink-500/20 to-rose-500/30 text-pink-400 border-pink-500/30' });
+      }
+    });
+
+    // Sort by sales then leads
     rankedList.sort((a, b) => {
       if (b.totalSales !== a.totalSales) {
         return b.totalSales - a.totalSales;
@@ -971,92 +1033,222 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </div>
-                    )}
-
-                    {/* Performance Leaderboard */}
+                    )}                    {/* Performance Leaderboard */}
                     <div className="glass-panel p-8 rounded-3xl space-y-6">
-                      <div>
-                        <h3 className="font-heading font-bold text-xl text-white flex items-center gap-2">
-                          <Trophy className="w-5.5 h-5.5 text-yellow-400" /> Performance Leaderboard
-                        </h3>
-                        <p className="text-white/40 text-xs mt-1">Real-time rankings based on cumulative closed sales and productivity metrics.</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="font-heading font-bold text-xl text-white flex items-center gap-2">
+                            <Trophy className="w-5.5 h-5.5 text-yellow-400" /> Performance Leaderboard
+                          </h3>
+                          <p className="text-white/40 text-xs mt-1">Real-time rankings based on cumulative closed sales, productivity logs, and attendance.</p>
+                        </div>
+                        <div className="flex bg-black/40 border border-white/10 rounded-xl p-1 self-start sm:self-auto shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setLeaderboardView('table')}
+                            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                              leaderboardView === 'table'
+                                ? 'bg-gradient-to-r from-accent to-accent-cyan text-white shadow-lg'
+                                : 'text-white/40 hover:text-white'
+                            }`}
+                          >
+                            Rankings Table
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLeaderboardView('charts')}
+                            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                              leaderboardView === 'charts'
+                                ? 'bg-gradient-to-r from-accent to-accent-cyan text-white shadow-lg'
+                                : 'text-white/40 hover:text-white'
+                            }`}
+                          >
+                            Analytics Charts
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left border-collapse">
-                          <thead>
-                            <tr className="border-b border-white/10 text-white/40 uppercase tracking-widest text-[10px] font-semibold">
-                              <th className="py-3 px-4 text-center w-24">Rank</th>
-                              <th className="py-3 px-4">Employee</th>
-                              <th className="py-3 px-4 text-center">Sales Closed</th>
-                              <th className="py-3 px-4 text-center">Leads Generated</th>
-                              <th className="py-3 px-4 text-center">Calls Made</th>
-                              <th className="py-3 px-4 text-center">Follow-ups</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5 font-sans">
-                            {getEmployeeRankings().map((emp, index) => {
-                              const rank = index + 1;
-                              let rankBadge = `#${rank}`;
-                              let rankColorClass = "text-white/60";
-                              let rankBgClass = "bg-white/5";
-                              if (rank === 1) {
-                                rankBadge = "🥇 1st";
-                                rankColorClass = "text-yellow-400 font-bold";
-                                rankBgClass = "bg-yellow-500/10 border border-yellow-500/20";
-                              } else if (rank === 2) {
-                                rankBadge = "🥈 2nd";
-                                rankColorClass = "text-slate-300 font-bold";
-                                rankBgClass = "bg-slate-300/10 border border-slate-300/20";
-                              } else if (rank === 3) {
-                                rankBadge = "🥉 3rd";
-                                rankColorClass = "text-amber-600 font-bold";
-                                rankBgClass = "bg-amber-600/10 border border-amber-600/20";
-                              }
+                      {leaderboardView === 'table' ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 text-white/40 uppercase tracking-widest text-[10px] font-semibold">
+                                <th className="py-3 px-4 text-center w-20">Rank</th>
+                                <th className="py-3 px-4">Employee</th>
+                                <th className="py-3 px-4 text-center">Sales Closed</th>
+                                <th className="py-3 px-4 text-center">Leads</th>
+                                <th className="py-3 px-4 text-center">Calls</th>
+                                <th className="py-3 px-4 text-center">Work Logs</th>
+                                <th className="py-3 px-4 text-center">Days Present</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-sans">
+                              {getEmployeeRankings().map((emp, index) => {
+                                const rank = index + 1;
+                                let rankBadge = `#${rank}`;
+                                let rankColorClass = "text-white/60";
+                                let rankBgClass = "bg-white/5";
+                                if (rank === 1) {
+                                  rankBadge = "🥇 1st";
+                                  rankColorClass = "text-yellow-400 font-bold";
+                                  rankBgClass = "bg-yellow-500/10 border border-yellow-500/20";
+                                } else if (rank === 2) {
+                                  rankBadge = "🥈 2nd";
+                                  rankColorClass = "text-slate-300 font-bold";
+                                  rankBgClass = "bg-slate-300/10 border border-slate-300/20";
+                                } else if (rank === 3) {
+                                  rankBadge = "🥉 3rd";
+                                  rankColorClass = "text-amber-600 font-bold";
+                                  rankBgClass = "bg-amber-600/10 border border-amber-600/20";
+                                }
 
-                              return (
-                                <tr 
-                                  key={emp.id} 
-                                  className="hover:bg-white/5 transition-all duration-200"
+                                return (
+                                  <tr 
+                                    key={emp.id} 
+                                    className="hover:bg-white/5 transition-all duration-200"
+                                  >
+                                    <td className="py-4 px-4 text-center">
+                                      <span className={`inline-block px-2.5 py-1 rounded-lg text-xs ${rankColorClass} ${rankBgClass}`}>
+                                        {rankBadge}
+                                      </span>
+                                    </td>
+                                    <td className="py-4 px-4">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-bold text-accent-cyan text-xs uppercase shrink-0 overflow-hidden">
+                                          {emp.avatar ? (
+                                            <img src={emp.avatar} alt={emp.fullName} className="w-full h-full object-cover" />
+                                          ) : (
+                                            emp.fullName.split(' ').map(n => n[0]).join('')
+                                          )}
+                                        </div>
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-white block">{emp.fullName}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] text-white/40">{emp.designation} • {emp.department}</span>
+                                          </div>
+                                          {emp.badges && emp.badges.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1.5">
+                                              {emp.badges.map((b, idx) => (
+                                                <span 
+                                                  key={idx} 
+                                                  title={b.desc}
+                                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border bg-gradient-to-r ${b.color} cursor-help`}
+                                                >
+                                                  <span>{b.icon}</span>
+                                                  <span>{b.label}</span>
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="py-4 px-4 text-center font-bold text-purple-400 font-mono text-base">
+                                      {emp.totalSales}
+                                    </td>
+                                    <td className="py-4 px-4 text-center font-mono text-white/70">
+                                      {emp.totalLeads}
+                                    </td>
+                                    <td className="py-4 px-4 text-center font-mono text-white/70">
+                                      {emp.totalCalls}
+                                    </td>
+                                    <td className="py-4 px-4 text-center font-mono text-purple-400 font-bold">
+                                      {emp.completedTasks}
+                                    </td>
+                                    <td className="py-4 px-4 text-center font-mono text-accent font-bold">
+                                      {emp.presentDays}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="flex flex-wrap items-center justify-between bg-white/5 border border-white/10 p-3 rounded-2xl gap-3">
+                            <span className="text-xs text-white/60 font-semibold ml-2">Chart Metric:</span>
+                            <div className="flex bg-black/40 border border-white/10 rounded-xl p-1 shrink-0">
+                              {['productivity', 'attendance', 'tasks'].map(m => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => setChartMetric(m)}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider ${
+                                    chartMetric === m
+                                      ? 'bg-gradient-to-r from-accent/25 to-accent-cyan/25 border border-accent/25 text-white'
+                                      : 'bg-transparent border border-transparent text-white/40 hover:text-white/60'
+                                  }`}
                                 >
-                                  <td className="py-4 px-4 text-center">
-                                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs ${rankColorClass} ${rankBgClass}`}>
-                                      {rankBadge}
-                                    </span>
-                                  </td>
-                                  <td className="py-4 px-4">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-bold text-accent-cyan text-xs uppercase shrink-0 overflow-hidden">
-                                        {emp.avatar ? (
-                                          <img src={emp.avatar} alt={emp.fullName} className="w-full h-full object-cover" />
-                                        ) : (
-                                          emp.fullName.split(' ').map(n => n[0]).join('')
-                                        )}
-                                      </div>
-                                      <div>
-                                        <span className="font-semibold text-white block">{emp.fullName}</span>
-                                        <span className="text-[10px] text-white/40">{emp.designation} • {emp.department}</span>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-4 px-4 text-center font-bold text-purple-400 font-mono text-base">
-                                    {emp.totalSales}
-                                  </td>
-                                  <td className="py-4 px-4 text-center font-mono text-white/70">
-                                    {emp.totalLeads}
-                                  </td>
-                                  <td className="py-4 px-4 text-center font-mono text-white/70">
-                                    {emp.totalCalls}
-                                  </td>
-                                  <td className="py-4 px-4 text-center font-mono text-white/70">
-                                    {emp.totalFollowups}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                                  {m}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="h-[320px] w-full bg-black/20 rounded-2xl border border-white/5 p-4 relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              {chartMetric === 'productivity' ? (
+                                <BarChart data={getEmployeeRankings()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                  <XAxis dataKey="fullName" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} />
+                                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: 'rgba(10, 10, 15, 0.95)',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                                      borderRadius: '12px',
+                                      color: '#fff',
+                                    }}
+                                  />
+                                  <Legend wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }} />
+                                  <Bar name="Sales Closed" dataKey="totalSales" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                  <Bar name="Leads" dataKey="totalLeads" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                                  <Bar name="Calls" dataKey="totalCalls" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                              ) : chartMetric === 'attendance' ? (
+                                <BarChart data={getEmployeeRankings()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                  <XAxis dataKey="fullName" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} />
+                                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: 'rgba(10, 10, 15, 0.95)',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                                      borderRadius: '12px',
+                                      color: '#fff',
+                                    }}
+                                  />
+                                  <Bar name="Days Present" dataKey="presentDays" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                              ) : (
+                                <AreaChart data={getEmployeeRankings()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                  <defs>
+                                    <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4}/>
+                                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                                    </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                  <XAxis dataKey="fullName" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} />
+                                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: 'rgba(10, 10, 15, 0.95)',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                                      borderRadius: '12px',
+                                      color: '#fff',
+                                    }}
+                                  />
+                                  <Area name="Work Logs" type="monotone" dataKey="completedTasks" stroke="#a855f7" fillOpacity={1} fill="url(#colorTasks)" />
+                                </AreaChart>
+                              )}
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
