@@ -12,7 +12,12 @@ export default function CustomCursor() {
 
     // Listen for changes (e.g. connecting a mouse to an iPad or rotating)
     const handler = (e) => setHasHoverSupport(e.matches);
-    mediaQuery.addEventListener('change', handler);
+    
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handler);
+    } else if (mediaQuery.addListener) {
+      mediaQuery.addListener(handler);
+    }
 
     const updateMousePosition = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
@@ -20,7 +25,11 @@ export default function CustomCursor() {
 
     window.addEventListener('mousemove', updateMousePosition);
     return () => {
-      mediaQuery.removeEventListener('change', handler);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handler);
+      } else if (mediaQuery.removeListener) {
+        mediaQuery.removeListener(handler);
+      }
       window.removeEventListener('mousemove', updateMousePosition);
     };
   }, []);
