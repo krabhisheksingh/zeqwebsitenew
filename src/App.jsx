@@ -37,15 +37,15 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const isHRRoute = location.pathname.startsWith('/employee-login');
+  const isStandaloneRoute = location.pathname.startsWith('/employee-login');
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent selection:text-white transition-colors duration-500">
       <ScrollToTop />
       <CustomCursor />
 
-      {/* ── HR Portal routes bypass loading screen & main layout ── */}
-      {isHRRoute && (
+      {/* ── Standalone routes bypass loading screen & main layout ── */}
+      {isStandaloneRoute && (
         <Routes location={location} key={location.pathname}>
           <Route path="/employee-login" element={<HRLogin />} />
           <Route path="/employee-login/dashboard" element={<HRProtected allowedRoles={['employee']}><EmployeeDashboard /></HRProtected>} />
@@ -55,7 +55,7 @@ function App() {
       )}
 
       {/* ── Main website (existing, unmodified) ── */}
-      {!isHRRoute && (
+      {!isStandaloneRoute && (
         <>
           <AnimatePresence mode="wait">
             {loading && <LoadingScreen key="loading" />}

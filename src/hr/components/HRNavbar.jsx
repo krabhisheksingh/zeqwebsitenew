@@ -9,7 +9,7 @@ export default function HRNavbar({ title }) {
 
   const logout = () => {
     clearSession();
-    navigate('/employee-login');
+    navigate('/');
   };
 
   return (

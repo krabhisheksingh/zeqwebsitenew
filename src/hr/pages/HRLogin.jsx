@@ -49,8 +49,8 @@ export default function HRLogin() {
       toast.success(
         <div>
           <span className="font-semibold text-amber-400 block mb-1">⚠️ EmailJS Not Configured</span>
-          <span className="text-[10px] block text-white/60">Configure environment keys in your <code>.env</code> file to send actual emails.</span>
-          <span className="text-xs block mt-2 text-white">Your verification code is: <strong className="text-accent-cyan text-sm font-mono bg-white/10 px-1.5 py-0.5 rounded">{code}</strong></span>
+          <span className="text-[10px] block text-foreground/60">Configure environment keys in your <code>.env</code> file to send actual emails.</span>
+          <span className="text-xs block mt-2 text-foreground">Your verification code is: <strong className="text-accent-cyan text-sm font-mono bg-foreground/10 px-1.5 py-0.5 rounded">{code}</strong></span>
         </div>,
         { duration: 15000 }
       );
@@ -94,8 +94,8 @@ export default function HRLogin() {
       toast.error(
         <div>
           <span className="font-semibold text-red-400 block mb-1">❌ Failed to send email</span>
-          <span className="text-[10px] block text-white/60">Error: {err.message || 'Network error'}</span>
-          <span className="text-xs block mt-2 text-white">Temporary verification code: <strong className="text-accent-cyan text-sm font-mono bg-white/10 px-1.5 py-0.5 rounded">{code}</strong></span>
+          <span className="text-[10px] block text-foreground/60">Error: {err.message || 'Network error'}</span>
+          <span className="text-xs block mt-2 text-foreground">Temporary verification code: <strong className="text-accent-cyan text-sm font-mono bg-foreground/10 px-1.5 py-0.5 rounded">{code}</strong></span>
         </div>,
         { duration: 15000 }
       );
@@ -232,7 +232,7 @@ export default function HRLogin() {
     }
     setLoading(false);
   };
-
+ 
   const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
@@ -270,7 +270,7 @@ export default function HRLogin() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      <Toaster position="top-right" toastOptions={{ className: 'glass-panel', style: { background: 'rgba(10,10,15,0.8)', color: '#fff', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' } }} />
+      <Toaster position="top-right" toastOptions={{ className: 'glass-panel', style: { background: 'rgba(10,10,15,0.8)', color: "var(--color-foreground)", backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' } }} />
       {/* Cinematic 3D Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] rounded-full bg-accent-violet/20 blur-[120px] mix-blend-screen opacity-50 animate-pulse"></div>
@@ -292,12 +292,12 @@ export default function HRLogin() {
             className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-tr from-accent to-accent-cyan p-0.5 shadow-[0_0_40px_rgba(79,142,247,0.4)] mb-6 relative group cursor-pointer"
           >
             <div className="w-full h-full rounded-[14px] bg-background flex items-center justify-center relative overflow-hidden">
-              <Shield className="w-10 h-10 text-white/90 relative z-10" />
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <Shield className="w-10 h-10 text-foreground/90 relative z-10" />
+              <div className="absolute inset-0 bg-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
           </motion.div>
-          <h1 className="text-3xl font-heading font-bold text-white tracking-wide">Zexora Quvixo</h1>
-          <p className="text-white/40 mt-2 tracking-widest text-sm uppercase">Global Intelligence Ecosystem</p>
+          <h1 className="text-3xl font-heading font-bold text-foreground tracking-wide">Zexora Quvixo</h1>
+          <p className="text-foreground/40 mt-2 tracking-widest text-sm uppercase">Global Intelligence Ecosystem</p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -305,7 +305,7 @@ export default function HRLogin() {
             key={error ? 'error' : 'normal'}
             initial={error ? { x: [-10, 10, -10, 10, 0] } : false}
             transition={{ duration: 0.4 }}
-            className={`glass-panel rounded-3xl p-8 relative overflow-hidden transition-colors duration-300 ${error ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'border-white/10'}`}
+            className={`glass-panel rounded-3xl p-8 relative overflow-hidden transition-colors duration-300 ${error ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'border-foreground/10'}`}
           >
             {/* Glossy overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
@@ -313,38 +313,38 @@ export default function HRLogin() {
             {seeding ? (
               <div className="flex flex-col items-center justify-center py-10 space-y-4">
                 <div className="w-12 h-12 relative">
-                  <div className="absolute inset-0 rounded-full border-2 border-white/10"></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-foreground/10"></div>
                   <div className="absolute inset-0 rounded-full border-2 border-accent-cyan border-t-transparent animate-spin"></div>
                 </div>
-                <p className="text-white/40 font-heading text-sm uppercase tracking-widest">Initializing Core...</p>
+                <p className="text-foreground/40 font-heading text-sm uppercase tracking-widest">Initializing Core...</p>
               </div>
             ) : (
               <form onSubmit={handleLogin} className="flex flex-col gap-6 relative z-10">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Employee ID / Username</label>
+                  <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">Employee ID / Username</label>
                   <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                     <input 
                       name="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
                       required autoComplete="username" placeholder="e.g. EMP001"
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white outline-none focus:border-accent-cyan focus:bg-white/5 transition-all text-sm placeholder:text-white/20" 
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-foreground/5 border border-foreground/10 text-foreground outline-none focus:border-accent-cyan focus:bg-foreground/5 transition-all text-sm placeholder:text-foreground/20" 
                     />
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-accent-cyan group-focus-within:w-[80%] transition-all duration-300 opacity-0 group-focus-within:opacity-100 blur-[1px]"></div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Password</label>
+                  <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">Password</label>
                   <div className="relative group">
-                    <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                    <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                     <input 
                       name="password" type={showPass ? 'text' : 'password'} value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
                       required autoComplete="current-password" placeholder="••••••••"
-                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-black/40 border border-white/10 text-white outline-none focus:border-accent-cyan focus:bg-white/5 transition-all text-sm placeholder:text-white/20" 
+                      className="w-full pl-11 pr-11 py-3.5 rounded-xl bg-foreground/5 border border-foreground/10 text-foreground outline-none focus:border-accent-cyan focus:bg-foreground/5 transition-all text-sm placeholder:text-foreground/20" 
                     />
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-accent-cyan group-focus-within:w-[80%] transition-all duration-300 opacity-0 group-focus-within:opacity-100 blur-[1px]"></div>
-                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-foreground/30 hover:text-foreground transition-colors">
                       {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -358,15 +358,15 @@ export default function HRLogin() {
 
                 <div className="flex justify-between items-center px-1">
                   <label className="flex items-center gap-2 cursor-pointer group">
-                    <input type="checkbox" className="w-4 h-4 rounded bg-black/40 border border-white/20 checked:bg-accent-cyan accent-accent-cyan cursor-pointer" />
-                    <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors">Remember me</span>
+                    <input type="checkbox" className="w-4 h-4 rounded bg-foreground/5 border border-foreground/20 checked:bg-accent-cyan accent-accent-cyan cursor-pointer" />
+                    <span className="text-xs text-foreground/40 group-hover:text-foreground/70 transition-colors">Remember me</span>
                   </label>
-                  <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-accent-cyan hover:text-white transition-colors hover:underline">Forgot Password?</button>
+                  <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-accent-cyan hover:text-foreground transition-colors hover:underline">Forgot Password?</button>
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="mt-4 w-full py-4 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-white font-bold text-sm hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all disabled:opacity-60 disabled:hover:shadow-none flex items-center justify-center gap-2 relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                  className="mt-4 w-full py-4 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-foreground font-bold text-sm hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all disabled:opacity-60 disabled:hover:shadow-none flex items-center justify-center gap-2 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-foreground/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
                   {loading ? (
                     <svg className="animate-spin w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
                   ) : (
@@ -375,14 +375,14 @@ export default function HRLogin() {
                 </button>
 
                 <div className="flex items-center gap-4 my-2">
-                  <div className="h-px bg-white/10 flex-1"></div>
-                  <span className="text-xs text-white/40 uppercase tracking-widest font-semibold">OR</span>
-                  <div className="h-px bg-white/10 flex-1"></div>
+                  <div className="h-px bg-foreground/10 flex-1"></div>
+                  <span className="text-xs text-foreground/40 uppercase tracking-widest font-semibold">OR</span>
+                  <div className="h-px bg-foreground/10 flex-1"></div>
                 </div>
 
                 <button type="button" onClick={handleGoogleLogin} disabled={loading}
-                  className="w-full py-3.5 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-sm hover:bg-white/10 transition-all flex items-center justify-center gap-3 group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  className="w-full py-3.5 rounded-xl bg-foreground/5 border border-foreground/10 text-foreground font-semibold text-sm hover:bg-foreground/10 transition-all flex items-center justify-center gap-3 group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <svg className="w-5 h-5 relative z-10" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -396,7 +396,7 @@ export default function HRLogin() {
           </motion.div>
         </AnimatePresence>
 
-        <p className="text-center text-[10px] text-white/20 mt-8 font-mono tracking-widest uppercase">
+        <p className="text-center text-[10px] text-foreground/20 mt-8 font-mono tracking-widest uppercase">
           Zexora Quvixo HR Systems v2.0
         </p>
       </motion.div>
@@ -418,16 +418,16 @@ export default function HRLogin() {
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 20, opacity: 0 }}
               transition={{ type: 'spring', duration: 0.5 }}
-              className="w-full max-w-md glass-panel rounded-3xl border border-white/10 p-8 relative overflow-hidden z-10 bg-background/80"
+              className="w-full max-w-md glass-panel rounded-3xl border border-foreground/10 p-8 relative overflow-hidden z-10 bg-background/80"
             >
               <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] bg-accent-violet/10 rounded-full blur-[60px] pointer-events-none"></div>
               
               <div className="flex justify-between items-center mb-6 relative z-10">
-                <h3 className="text-xl font-heading font-bold text-white">Password Recovery</h3>
+                <h3 className="text-xl font-heading font-bold text-foreground">Password Recovery</h3>
                 <button
                   type="button"
                   onClick={closeForgotModal}
-                  className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white transition-colors"
+                  className="p-1.5 rounded-lg bg-foreground/5 border border-foreground/10 text-foreground/60 hover:text-foreground transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -435,30 +435,30 @@ export default function HRLogin() {
 
               {forgotStep === 1 && (
                 <form onSubmit={handleVerifyRecovery} className="space-y-5 relative z-10">
-                  <p className="text-xs text-white/50 leading-relaxed">
+                  <p className="text-xs text-foreground/50 leading-relaxed">
                     Enter your Employee ID and registered email address to verify your account identity.
                   </p>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Employee ID</label>
+                    <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">Employee ID</label>
                     <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                       <input 
                         type="text" required placeholder="e.g. EMP001"
                         value={forgotForm.id} onChange={(e) => setForgotForm({ ...forgotForm, id: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                        className="w-full pl-11 pr-4 py-3 bg-foreground/5 border border-foreground/10 rounded-xl text-foreground outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-foreground/20" 
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Email Address</label>
+                    <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">Email Address</label>
                     <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                       <input 
                         type="email" required placeholder="demo@zexoraquvixo.in"
                         value={forgotForm.email} onChange={(e) => setForgotForm({ ...forgotForm, email: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                        className="w-full pl-11 pr-4 py-3 bg-foreground/5 border border-foreground/10 rounded-xl text-foreground outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-foreground/20" 
                       />
                     </div>
                   </div>
@@ -468,7 +468,7 @@ export default function HRLogin() {
                   )}
 
                   <button type="submit" disabled={forgotLoading}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2">
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-foreground font-bold text-sm hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2">
                     {forgotLoading ? (
                       <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
                     ) : 'VERIFY IDENTITY'}
@@ -478,18 +478,18 @@ export default function HRLogin() {
 
               {forgotStep === 2 && (
                 <form onSubmit={handleVerifyCode} className="space-y-5 relative z-10">
-                  <p className="text-xs text-white/50 leading-relaxed">
+                  <p className="text-xs text-foreground/50 leading-relaxed">
                     A 6-digit verification code has been sent to <span className="text-accent-cyan font-semibold">{forgotForm.email}</span>. Please enter it below.
                   </p>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Verification Code</label>
+                    <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">Verification Code</label>
                     <div className="relative group">
-                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                       <input 
                         type="text" required placeholder="e.g. 123456" maxLength={6}
                         value={enteredCode} onChange={(e) => setEnteredCode(e.target.value.replace(/\D/g, ''))}
-                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20 font-mono tracking-widest text-center" 
+                        className="w-full pl-11 pr-4 py-3 bg-foreground/5 border border-foreground/10 rounded-xl text-foreground outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-foreground/20 font-mono tracking-widest text-center" 
                       />
                     </div>
                   </div>
@@ -500,11 +500,11 @@ export default function HRLogin() {
 
                   <div className="flex gap-4">
                     <button type="button" onClick={handleResendCode} disabled={forgotLoading}
-                      className="w-1/2 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-bold text-xs hover:bg-white/10 hover:text-white transition-all disabled:opacity-50">
+                      className="w-1/2 py-3 rounded-xl bg-foreground/5 border border-foreground/10 text-foreground/80 font-bold text-xs hover:bg-foreground/10 hover:text-foreground transition-all disabled:opacity-50">
                       RESEND CODE
                     </button>
                     <button type="submit" disabled={forgotLoading}
-                      className="w-1/2 py-3 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-white font-bold text-xs hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      className="w-1/2 py-3 rounded-xl bg-gradient-to-r from-accent to-accent-cyan text-foreground font-bold text-xs hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                       {forgotLoading ? (
                         <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
                       ) : 'VERIFY CODE'}
@@ -515,33 +515,33 @@ export default function HRLogin() {
 
               {forgotStep === 3 && (
                 <form onSubmit={handleResetPassword} className="space-y-5 relative z-10">
-                  <p className="text-xs text-white/50 leading-relaxed">
+                  <p className="text-xs text-foreground/50 leading-relaxed">
                     Identity verified for <span className="text-accent-cyan font-semibold">{verifiedEmpId}</span>. Please choose a new secure password.
                   </p>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">New Password</label>
+                    <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">New Password</label>
                     <div className="relative group">
-                      <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                       <input 
                         type={showForgotPass ? "text" : "password"} required placeholder="••••••••"
                         value={forgotForm.newPassword} onChange={(e) => setForgotForm({ ...forgotForm, newPassword: e.target.value })}
-                        className="w-full pl-11 pr-11 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                        className="w-full pl-11 pr-11 py-3 bg-foreground/5 border border-foreground/10 rounded-xl text-foreground outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-foreground/20" 
                       />
-                      <button type="button" onClick={() => setShowForgotPass(!showForgotPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                      <button type="button" onClick={() => setShowForgotPass(!showForgotPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-foreground/30 hover:text-foreground transition-colors">
                         {showForgotPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-widest text-white/50 font-bold ml-1">Confirm Password</label>
+                    <label className="text-[10px] uppercase tracking-widest text-foreground/50 font-bold ml-1">Confirm Password</label>
                     <div className="relative group">
-                      <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-accent-cyan transition-colors" />
+                      <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 group-focus-within:text-accent-cyan transition-colors" />
                       <input 
                         type={showForgotPass ? "text" : "password"} required placeholder="••••••••"
                         value={forgotForm.confirmPassword} onChange={(e) => setForgotForm({ ...forgotForm, confirmPassword: e.target.value })}
-                        className="w-full pl-11 pr-11 py-3 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-white/20" 
+                        className="w-full pl-11 pr-11 py-3 bg-foreground/5 border border-foreground/10 rounded-xl text-foreground outline-none focus:border-accent-cyan transition-all text-sm placeholder:text-foreground/20" 
                       />
                     </div>
                   </div>
@@ -551,7 +551,7 @@ export default function HRLogin() {
                   )}
 
                   <button type="submit" disabled={forgotLoading}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent-violet to-purple-600 text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all flex items-center justify-center gap-2">
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent-violet to-purple-600 text-foreground font-bold text-sm hover:shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all flex items-center justify-center gap-2">
                     {forgotLoading ? (
                       <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75"/></svg>
                     ) : 'RESET PASSWORD'}

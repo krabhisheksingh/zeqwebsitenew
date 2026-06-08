@@ -17,11 +17,11 @@ export default function Footer() {
           </p>
         </div>
 
-        <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
-          {['Home', 'Services', 'Careers', 'Contact', 'Employee Login'].map((item) => (
+        <nav className="flex items-center gap-6 text-sm">
+          {['Home', 'Services', 'Careers', 'Contact'].map((item) => (
             <Link 
               key={item} 
-              to={item === 'Home' ? '/' : `/${item.toLowerCase().replace(' ', '-')}`} 
+              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} 
               onClick={() => window.scrollTo(0, 0)}
               className="text-foreground/60 hover:text-accent transition-colors"
             >

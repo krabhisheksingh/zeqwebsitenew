@@ -147,7 +147,7 @@ export const getTodayRecord = async (employeeId) => {
   return snap.exists() ? snap.data() : null;
 };
 
-export const checkIn = async (employeeId, employeeName) => {
+export const checkIn = async (employeeId, employeeName, customTime = null) => {
   const today = new Date().toISOString().split('T')[0];
   const docId = `${employeeId}_${today}`;
   // Guard: only check in once per day
@@ -155,7 +155,7 @@ export const checkIn = async (employeeId, employeeName) => {
   if (existing.exists()) return false; // already checked in
   await setDoc(doc(db, 'attendance', docId), {
     id: docId, employeeId, employeeName, date: today,
-    checkIn: new Date().toISOString(), checkOut: null,
+    checkIn: customTime || new Date().toISOString(), checkOut: null,
     breaks: [], onBreak: false, totalBreakMinutes: 0,
     totalHours: null, status: 'present',
   });
@@ -247,7 +247,7 @@ export const getDashboardStats = async () => {
 
 // ── Wipe Data ─────────────────────────────────────────────────────────────────
 export const wipeAllEmployeeData = async () => {
-  const collectionsToWipe = ['attendance', 'leaves', 'tasks', 'payslips', 'documents', 'tickets', 'recognitions'];
+  const collectionsToWipe = ['attendance', 'leaves', 'tasks', 'payslips', 'documents', 'tickets', 'recognitions', 'lateRequests'];
   
   for (const collName of collectionsToWipe) {
     const snap = await getDocs(collection(db, collName));
@@ -273,11 +273,18 @@ export const HOLIDAYS_2026 = [
 // ── Export CSV ────────────────────────────────────────────────────────────────
 export const exportAttendanceCSV = async () => {
   const records = await getAttendance();
-  const header = 'Employee Name,Employee ID,Date,Check-In,Check-Out,Break (mins),Total Hours,Status\n';
+  const empSnap = await getDocs(collection(db, 'employees'));
+  const empMap = {};
+  empSnap.docs.forEach((d) => {
+    const data = d.data();
+    empMap[data.id] = data.campaign || '-';
+  });
+  const header = 'Employee Name,Employee ID,Campaign,Date,Check-In,Check-Out,Break (mins),Total Hours,Status\n';
   const rows = records.map((r) => {
     const ci = r.checkIn ? new Date(r.checkIn).toLocaleTimeString() : '-';
     const co = r.checkOut ? new Date(r.checkOut).toLocaleTimeString() : '-';
-    return `"${r.employeeName}","${r.employeeId}","${r.date}","${ci}","${co}","${r.totalBreakMinutes ?? 0}","${r.totalHours ?? '-'}","${r.status}"`;
+    const campaign = empMap[r.employeeId] || '-';
+    return `"${r.employeeName}","${r.employeeId}","${campaign}","${r.date}","${ci}","${co}","${r.totalBreakMinutes ?? 0}","${r.totalHours ?? '-'}","${r.status}"`;
   });
   const csv = header + rows.join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -309,7 +316,11 @@ export const getEmployeeDocuments = async (employeeId) => {
 };
 
 export const addDocument = async (document) => {
-  await addDoc(collection(db, 'documents'), { ...document, status: 'pending', uploadedAt: new Date().toISOString() });
+  await addDoc(collection(db, 'documents'), { status: 'pending', uploadedAt: new Date().toISOString(), ...document });
+};
+
+export const deleteDocument = async (id) => {
+  await deleteDoc(doc(db, 'documents', id));
 };
 
 export const getEmployeeTickets = async (employeeId) => {
@@ -360,3 +371,59 @@ export const deleteEmployee = async (id) => {
   await deleteDoc(doc(db, 'employees', id));
 };
 
+// ── Calendar Events ──────────────────────────────────────────────────────────
+export const getCalendarEvents = async (employeeId) => {
+  const q = query(collection(db, 'calendarEvents'), where('employeeId', '==', employeeId));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+};
+
+export const addCalendarEvent = async (eventData) => {
+  const docRef = await addDoc(collection(db, 'calendarEvents'), { 
+    ...eventData, 
+    createdAt: new Date().toISOString() 
+  });
+  return docRef.id;
+};
+
+export const deleteCalendarEvent = async (id) => {
+  await deleteDoc(doc(db, 'calendarEvents', id));
+};
+
+export const markCalendarEventTriggered = async (id) => {
+  await updateDoc(doc(db, 'calendarEvents', id), { isTriggered: true });
+};
+
+// ── Late Check-in Requests ───────────────────────────────────────────────────
+export const getLateRequests = async () => {
+  const snap = await getDocs(collection(db, 'lateRequests'));
+  return snap.docs.map((d) => ({ ...d.data(), _docId: d.id })).sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+};
+
+export const getTodayLateRequest = async (employeeId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const q = query(
+    collection(db, 'lateRequests'),
+    where('employeeId', '==', employeeId),
+    where('date', '==', today)
+  );
+  const snap = await getDocs(q);
+  return snap.empty ? null : { ...snap.docs[0].data(), _docId: snap.docs[0].id };
+};
+
+export const applyLateRequest = async (req) => {
+  const today = new Date().toISOString().split('T')[0];
+  await addDoc(collection(db, 'lateRequests'), {
+    ...req,
+    date: today,
+    status: 'pending',
+    requestedAt: new Date().toISOString()
+  });
+};
+
+export const updateLateRequestStatus = async (docId, status, checkInTime = null, employeeId = null, employeeName = null) => {
+  await updateDoc(doc(db, 'lateRequests', docId), { status, updatedAt: new Date().toISOString() });
+  if (status === 'approved' && checkInTime && employeeId && employeeName) {
+    await checkIn(employeeId, employeeName, checkInTime);
+  }
+};

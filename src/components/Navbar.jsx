@@ -7,9 +7,17 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('theme') || 'dark';
+      const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+      const savedDate = localStorage.getItem('theme_date');
+      if (savedDate !== today) {
+        // New day — reset to light mode
+        localStorage.setItem('theme_date', today);
+        localStorage.setItem('theme', 'light');
+        return 'light';
+      }
+      return localStorage.getItem('theme') || 'light';
     } catch (e) {
-      return 'dark';
+      return 'light';
     }
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,7 +42,9 @@ export default function Navbar() {
       document.documentElement.classList.remove('dark');
     }
     try {
+      const today = new Date().toISOString().slice(0, 10);
       localStorage.setItem('theme', theme);
+      localStorage.setItem('theme_date', today);
     } catch (e) {
       // Ignore security errors on iOS/Safari
     }
