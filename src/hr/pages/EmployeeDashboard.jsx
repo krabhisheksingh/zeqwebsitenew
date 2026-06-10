@@ -1962,7 +1962,7 @@ export default function EmployeeDashboard() {
 
               {/* Document Container */}
               <div className="flex-1 overflow-y-auto mb-6 bg-white/5 rounded-2xl border border-white/5 p-4 flex items-center justify-center min-h-[300px]">
-                selectedDocument.url ? (
+                {selectedDocument.url ? (
                   selectedDocument.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(selectedDocument.name) ? (
                     <img 
                       src={selectedDocument.url} 
