@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 
 import Home from './pages/Home';
 import Services from './pages/Services';
+import ServiceDetail from './pages/ServiceDetail';
 import Contact from './pages/Contact';
 import Careers from './pages/Careers';
 import JobApplication from './pages/JobApplication';
@@ -60,7 +61,7 @@ function App() {
           <AnimatePresence mode="wait">
             {loading && <LoadingScreen key="loading" />}
           </AnimatePresence>
-
+ 
           {!loading && (
             <>
               <Navbar />
@@ -68,6 +69,7 @@ function App() {
                 <Routes location={location} key={location.pathname}>
                   <Route path="/" element={<Home />} />
                   <Route path="/services" element={<Services />} />
+                  <Route path="/services/:id" element={<ServiceDetail />} />
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/apply/:id" element={<JobApplication />} />
                   <Route path="/contact" element={<Contact />} />

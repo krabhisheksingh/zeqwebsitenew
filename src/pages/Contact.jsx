@@ -1,130 +1,13 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, MapPin, Send, ArrowRight } from 'lucide-react';
-import { FaLinkedin, FaTwitter } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Mail, MapPin, Send } from 'lucide-react';
 import { db } from '../hr/utils/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-
-const teamMembers = [
-  {
-    name: "Neha Patel",
-    role: "Director",
-    image: "/neha.jpg",
-    objectPos: "top",
-    bio: "Driving strategic initiatives and operational excellence across the organization.",
-    social: { linkedin: "#", twitter: "#" }
-  },
-  {
-    name: "Vivek Patel",
-    role: "Founder & Chief Executive Officer",
-    image: "/vivek.jpg",
-    objectPos: "center 20%",
-    bio: "Visionary leader with a decade of experience in enterprise intelligence.",
-    social: { linkedin: "#", twitter: "#" }
-  },
-  {
-    name: "Abhishek Singh",
-    role: "Technical Head",
-    image: "/abhishek.jpg",
-    objectPos: "top",
-    bio: "Building smart and reliable technology solutions while leading the team with creativity and clarity. Focused on turning ideas into impactful digital experiences, ensuring every project is developed with innovation, quality, and attention to detail.",
-    social: { linkedin: "#", twitter: "#" }
-  },
-  {
-    name: "Shruti Patel",
-    role: "Chief Legal Officer (CLO)",
-    image: "/shruti.jpg",
-    objectPos: "top",
-    bio: "Navigating complex legal landscapes and ensuring corporate compliance.",
-    social: { linkedin: "#", twitter: "#" }
-  }
-];
-
-// ── Team Photo — expands on 3s hover or tap; only one open at a time ─────────
-function TeamPhoto({ src, alt, isExpanded, onOpen, onClose, objectPos = 'top' }) {
-  const hoverTimerRef = useRef(null);
-  const autoCloseTimerRef = useRef(null);
-
-  const openExpanded = () => {
-    onOpen();
-    clearTimeout(autoCloseTimerRef.current);
-    autoCloseTimerRef.current = setTimeout(onClose, 10000);
-  };
-
-  const closeExpanded = () => {
-    onClose();
-    clearTimeout(autoCloseTimerRef.current);
-  };
-
-  // Desktop: hover 3s → open
-  const handleMouseEnter = () => {
-    hoverTimerRef.current = setTimeout(openExpanded, 3000);
-  };
-  const handleMouseLeave = () => clearTimeout(hoverTimerRef.current);
-
-  // Tap/click: if this photo is open → close; if closed → open
-  const handleTap = (e) => {
-    e.stopPropagation();
-    if (isExpanded) closeExpanded(); else openExpanded();
-  };
-
-  // Global listener — close on ANY tap/click anywhere on the page while open
-  useEffect(() => {
-    if (!isExpanded) return;
-    const handleDocClick = () => closeExpanded();
-    document.addEventListener('click', handleDocClick);
-    return () => document.removeEventListener('click', handleDocClick);
-  }, [isExpanded]);
-
-  useEffect(() => () => {
-    clearTimeout(hoverTimerRef.current);
-    clearTimeout(autoCloseTimerRef.current);
-  }, []);
-
-  return (
-    <>
-      <div
-        className="w-32 h-32 rounded-full overflow-hidden mb-6 border-2 border-accent/20 group-hover:border-accent transition-colors duration-500 relative cursor-pointer"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleTap}
-      >
-        <img src={src} alt={alt} style={{ objectPosition: objectPos }} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-        <div className="absolute inset-0 bg-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 mix-blend-overlay" />
-      </div>
-
-      {/* Expanded overlay — click anywhere (backdrop or photo) closes it */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-            className="fixed inset-0 z-[9000] flex items-center justify-center"
-            onClick={closeExpanded}
-          >
-            <div className="absolute inset-0 bg-background/75 backdrop-blur-md" />
-            <motion.div
-              className="relative z-10 rounded-3xl overflow-hidden border-4 border-accent/40 shadow-[0_0_80px_rgba(60,100,255,0.4)]"
-              style={{ width: 256, height: 256 }}
-            >
-              <img src={src} alt={alt} style={{ objectPosition: objectPos }} className="w-full h-full object-cover object-top" />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
-}
 
 export default function Contact() {
   const [formState, setFormState] = useState({ name: '', email: '', subject: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  // Track which team photo is expanded (-1 = none)
-  const [expandedTeamIdx, setExpandedTeamIdx] = useState(-1);
-  const autoCloseTeamRef = useRef(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -211,47 +94,6 @@ export default function Contact() {
           </motion.div>
         </div>
       </section>
-
-      {/* Team Section */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full mb-32 mt-8">
-        <div className="flex items-center gap-4 mb-6 justify-center">
-          <div className="w-12 h-[1px] bg-accent"></div>
-          <span className="text-accent text-sm font-semibold tracking-[0.2em] uppercase">Leadership</span>
-          <div className="w-12 h-[1px] bg-accent"></div>
-        </div>
-        
-        <h2 className="text-4xl md:text-5xl font-bold tracking-tighter mb-16 text-center">
-          Meet Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-purple-500">Team</span>
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {teamMembers.map((member, idx) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: idx * 0.2 }}
-              className="glass-panel border border-border/30 rounded-3xl p-6 flex flex-col items-center text-center group hover:border-accent/40 transition-colors duration-500"
-            >
-              <TeamPhoto
-                src={member.image}
-                alt={member.name}
-                isExpanded={expandedTeamIdx === idx}
-                onOpen={() => setExpandedTeamIdx(idx)}
-                onClose={() => setExpandedTeamIdx(-1)}
-                objectPos={member.objectPos}
-              />
-              <h3 className="text-2xl font-bold mb-1">{member.name}</h3>
-              <p className="text-accent font-medium text-sm mb-4 tracking-wide uppercase">{member.role}</p>
-              <p className="text-foreground/70 font-light text-sm mb-6 leading-relaxed">
-                {member.bio}
-              </p>
-
-            </motion.div>
-          ))}
-        </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
         
