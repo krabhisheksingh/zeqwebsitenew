@@ -4,6 +4,7 @@ import About from '../components/About';
 import Pillars from '../components/Pillars';
 import WhyChooseUs from '../components/WhyChooseUs';
 import Quote from '../components/Quote';
+import OurClients from '../components/OurClients';
 import Metrics from '../components/Metrics';
 
 export default function Home() {
@@ -14,6 +15,7 @@ export default function Home() {
       <Pillars />
       <WhyChooseUs />
       <Quote />
+      <OurClients />
       <Metrics />
     </main>
   );
